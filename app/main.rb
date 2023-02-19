@@ -12,9 +12,9 @@ PLAYER_HEIGHT = 8
 
 # initial setup
 def init args
-  args.state.camera.x                ||= 1280/2
-  args.state.camera.y                ||= 720/2
-  args.state.camera.scale            ||= 1.0
+  args.state.camera.x                ||= -1280 * 4.5
+  args.state.camera.y                ||= -720 * 4.5
+  args.state.camera.scale            ||= 10.0
   args.state.camera.show_empty_space ||= :yes
 
   # set speed
@@ -47,15 +47,16 @@ def init args
                                            r: args.state.cor_1.r, 
                                            g: args.state.cor_1.g, 
                                            b: args.state.cor_1.b }
-  
+
+  # x scale to flip the sprite
+  args.state.x_scale ||= 1
+
   # create player with color 2
   args.state.player                  ||= { x: 1280/2, 
                                            y: 720/2,
-                                           w: PLAYER_WIDTH, 
+                                           w: PLAYER_WIDTH * args.state.x_scale, 
                                            h: PLAYER_HEIGHT,  
-                                           r: args.state.cor_2.r, 
-                                           g: args.state.cor_2.g, 
-                                           b: args.state.cor_2.b }
+                                           path: "/sprites/player/player0.png" }
 end
 
 # all renders goes here
@@ -71,28 +72,28 @@ def render args
   args.outputs[:scene].primitives    << args.state.back.solid! 
   args.outputs[:scene].primitives    << args.state.nokia_bg.sprite! 
   args.outputs[:scene].primitives    << args.state.background.solid!
-  args.outputs[:scene].primitives    << args.state.player.solid!
+  args.outputs[:scene].primitives    << args.state.player.sprite!
  
   # render camera
-  scene_position                    = calc_scene_position args
-  args.outputs.sprites              << { x: scene_position.x, 
+  scene_position                     = calc_scene_position args
+  args.outputs.sprites               << { x: scene_position.x, 
                                          y: scene_position.y,
                                          w: scene_position.w, 
                                          h: scene_position.h, 
                                          path: :scene }
 
   # set X boundaries
-  if args.state.player[:x] < 220 
-    args.state.player[:x] = 960
-  elsif args.state.player[:x] > 960
-    args.state.player[:x] = 220
+  if args.state.player[:x] < 598 
+    args.state.player[:x] = 674
+  elsif args.state.player[:x] > 674
+    args.state.player[:x] = 598
   end
 
   # set Y boundaries
-  if args.state.player[:y] < 120
-    args.state.player[:y] = 510
-  elsif args.state.player[:y] > 520
-    args.state.player[:y] = 120
+  if args.state.player[:y] < 336
+    args.state.player[:y] = 376
+  elsif args.state.player[:y] > 376
+    args.state.player[:y] = 336
   end
 
   # DEBUG TEXTS
@@ -109,12 +110,25 @@ def render args
                                          r: 255, 
                                          g: 255, 
                                          b: 255}.label!
+
+  # DEBUB TEXT PLAYER
+  args.outputs.labels               << { x: 250, 
+                                         y: 310.from_top, 
+                                         text: "#{args.state.player.y}, #{args.state.player.x}" }
+
 end
 
 # manage all inputs
 def inputs args
   args.state.player[:x] += args.inputs.left_right * args.state.speed
+  args.state.x_scale = args.inputs.left_right
   args.state.player[:y] += args.inputs.up_down * args.state.speed
+
+  if args.inputs.left_right != 0 or args.inputs.up_down != 0
+    looping_animation args 
+  else
+    args.state.player[:path] = "/sprites/player/player1.png"
+  end
 
   # +/- to zoom in and out
   if args.inputs.keyboard.equal_sign && args.state.tick_count.zmod?(3)
@@ -133,8 +147,8 @@ def inputs args
 end
 
 def calc_scene_position args
-  result = { x: args.state.camera.x - (args.state.player.x * args.state.camera.scale),
-             y: args.state.camera.y - (args.state.player.y * args.state.camera.scale),
+  result = { x: args.state.camera.x,
+             y: args.state.camera.y,
              w: args.state.world.w * args.state.camera.scale,
              h: args.state.world.h * args.state.camera.scale,
              scale: args.state.camera.scale }
@@ -160,10 +174,40 @@ def calc_scene_position args
   result
 end
 
+def looping_animation args
+  # Here we define a few local variables that will be sent
+  # into the magic function that gives us the correct sprite image
+  # over time. There are four things we need in order to figure
+  # out which sprite to show.
+
+  # 1. When to start the animation.
+  start_looping_at = 1
+
+  # 2. The number of pngs that represent the full animation.
+  number_of_sprites = 5
+
+  # 3. How long to show each png.
+  number_of_frames_to_show_each_sprite = 4
+
+  # 4. Whether the animation should loop once, or forever.
+  does_sprite_loop = true
+
+  # With the variables defined above, we can get a number
+  # which represents the sprite to show by calling the `frame_index` function.
+  # In this case the number will be between 0, and 5 (you can see the sprites
+  # in the ./sprites directory).
+  sprite_index = start_looping_at.frame_index number_of_sprites,
+                                              number_of_frames_to_show_each_sprite,
+                                              does_sprite_loop
+
+  args.state.player[:path] = "sprites/player/player#{sprite_index}.png"
+end
+
 # update func
 def tick args
   init args
   inputs args 
+  # looping_animation args
   render args
 end
 
