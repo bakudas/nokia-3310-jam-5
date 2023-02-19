@@ -17,7 +17,33 @@
 
 # Remove the x from xrepl to run the code. Add the x back to ignore to code.
 xrepl do
-  puts "The result of 1 + 2 is: #{1 + 2}"
+  
+  sprites = {
+    "#": "/sprites/rooms/parede_h_cima.png",
+    "|": "/sprites/rooms/parede_v_direita.png",
+    "c": "/sprites/colecionais/coragem.png",
+    "b": "/sprites/enemies/box1.png"
+  }
+
+  room001 = [
+    "##########",
+    "|        |",
+    "|        |",
+    "|    c   |",
+    "| b      |",
+    "##########"
+  ]
+
+  def draw_room(room, sprites)
+    room.each do |row|
+      row.chars.each do |char|
+        print sprites[char]
+      end
+      puts
+    end
+  end
+
+  room001.each_with_index { |e,i| puts i[e] }
 end
 
 # ====================================================================================
