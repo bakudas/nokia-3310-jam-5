@@ -41,7 +41,7 @@ ROOM001 = [
   "#bbbbbbb     bbbbbbb#",
   "#bbbbbbb     bbbbbbb#",
   "#####################"
-].reverse
+]
 
 ROOM002 = [
   "#####################",
@@ -53,37 +53,27 @@ ROOM002 = [
   "#  d   #            s",
   "########   ##########",
   "#  x                #",
-  "#  x                #",
-  "#  x                #",
   "#####################"
-].reverse
+]
 
-def populate_room(args, room, entities)
+def draw_room(args, room, entities)
   room.each_with_index { |row,i| 
     args.state.room << {"row#{i}": {} }
 
     row.split("").each_with_index { |c,ii| 
-      args.state.room[:"row#{i}"] << { "tile#{i}_#{ii}": { x: SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , y: SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , w: TILE_SIZE , h: TILE_SIZE, r: 155, g: 0, b: 0 } } }      
+      args.state.room[:"row#{i}"] << { "tile#{i}_#{ii}": { x: SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH +  "#{ii * TILE_SIZE}".to_i , y: SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT +  "#{i * TILE_SIZE}".to_i , w: TILE_SIZE , h: TILE_SIZE, r: 255, g: 0, b: 0 } } }      
   }
 end
 
-def render_room(args, room, entities)
-  args.state.room ||= {}
-  room.each_with_index { |row,i| 
-    row.split("").each_with_index { |c,ii| 
-      args.outputs[:scene].primitives << { x: SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , y: SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , w: TILE_SIZE , h: TILE_SIZE, path:ENTITIES[:"#{c}"] }.sprite! 
-    }
-  }      
-end
-
-
 # initial setup
 def init args
-  # args.state.room ||= {}
+  args.state.room ||= {}
 
-  # if args.state.room == {} and args.state.tick_count == 0 
-  #   draw_room(args, ROOM001, ENTITIES) 
-  # end
+  if args.state.room == {} and args.state.tick_count == 0 
+    draw_room(args, ROOM001, ENTITIES) 
+  end
+
+  puts args.state.room[:row0][:tile0_0].inspect unless args.state.tick_count != 0
 
   # set background color
   # args.outputs.background_color      ||= [0, 0, 0]
@@ -145,15 +135,39 @@ def render args
   args.outputs[:scene].h             ||= args.state.world.h
 
   # render game objects
-  # args.outputs[:scene].primitives     << args.state.nokia_bg.sprite! 
-  # args.outputs[:scene].primitives     << args.state.back.sprite!
-  # args.outputs[:scene].primitives     << args.state.background.sprite!
+  # args.outputs[:scene].primitives    << args.state.nokia_bg.sprite! 
+  args.outputs[:scene].primitives     << args.state.back.sprite!
+  args.outputs[:scene].primitives     << args.state.background.sprite!
   
-  # RENDER ROOMS
-  render_room(args, ROOM001, ENTITIES) unless args.state.tick_count == 0
-
+  puts args.state.room[:row0][:tile0_0].inspect unless args.state.tick_count != 0 
+  args.outputs[:scene].primitives     << args.state.room[:row0][:tile0_0].solids!
+  
   args.outputs[:scene].primitives     << args.state.player.sprite!
-  
+ 
+  # DRAW TESTE && DEBUG STUFF
+  args.state.wall ||= {}
+
+  args.state.wall                    << { x: SCREEN_CENTER_H - 10, 
+                                          y: SCREEN_CENTER_V - 10, 
+                                          w: TILE_SIZE, 
+                                          h: TILE_SIZE, 
+                                          r: args.state.cores.secundaria[:r], 
+                                          g: args.state.cores.secundaria[:g], 
+                                          b: args.state.cores.secundaria[:b],
+                                          path: 01 }
+
+  args.state.wall                    << { x: SCREEN_CENTER_H - 20, 
+                                          y: SCREEN_CENTER_V - 20, 
+                                          w: TILE_SIZE, 
+                                          h: TILE_SIZE, 
+                                          r: args.state.cores.secundaria[:r], 
+                                          g: args.state.cores.secundaria[:g], 
+                                          b: args.state.cores.secundaria[:b], 
+                                          path: 02 }
+
+
+  args.outputs[:scene].borders      << args.state.wall
+
   # render camera
   scene_position                    = calc_scene_position args
   args.outputs.sprites              << { x: scene_position.x, 
@@ -201,7 +215,7 @@ end
 # manage all inputs
 def inputs args, *vector
   player_bounding_box = args.state.player.shift_rect(args.inputs.left_right, args.inputs.up_down)
-  return unless !(args.state.room.any_intersect_rect? player_bounding_box)
+  return unless !(args.state[:wall].intersect_rect? player_bounding_box)
   args.state.player[:x] += args.inputs.left_right * args.state.speed
   args.state.player[:y] += args.inputs.up_down * args.state.speed
 

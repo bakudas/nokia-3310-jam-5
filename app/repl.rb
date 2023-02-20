@@ -1,7 +1,57 @@
-xrepl do
+# level entities 
+entities ||= {
+  "#": "/sprites/rooms/wall.png",
+  "c": "/sprites/rooms/collectable.png",
+  "b": "/sprites/rooms/box.png",
+  "k": "/sprites/rooms/.png",
+  "d": "/sprites/rooms/door.png",
+  "x": "/sprites/enemies/enemies.png",
+  "s": "/sprites/rooms/start.png",
+  "e": "/sprites/rooms/exit.png",
+  " ": "/sprites/rooms/empty.png"
+}
+
+room001 ||= [
+  "##########s##########",
+  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb     bbbbbbb#",
+  "e      d     bbbbbbb#",
+  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb  c  bbbbbbb#",
+  "#####################"
+].reverse
+
+repl do
+  args.state.walls = []
+  args.state.enemies = []
+  args.state.collectables = []
+
+
   args.state.cadeiras ||= {}
-  args.state.cadeiras << cadeira: { w: 10, h: 10, x: 10, y: 10 }
+  args.state.cadeiras << { cadeira: { w: 10, h: 10, x: 10, y: 10 } }
+  args.state.cadeiras << { mesa: { w: 20, h: 20, x: 20, y: 20 } }
   puts args.state.cadeiras[:cadeira]
+  puts args.state.cadeiras[:mesa]
+
+  tile_size = 4
+
+  args.state.room = {}
+  room001.each_with_index { |row,i|
+    puts "#{i}:"  
+    row.split("").each_with_index { |c,ii|
+      # Iterate the row and populate state hash room with tiles
+      args.state.room << { "row#{i}": {"tile#{ii}": { x: "#{ii * TILE_SIZE}" , y: "#{i * TILE_SIZE}" , w: TILE_SIZE , h: TILE_SIZE, path: entities[:"#{c}"] } } }
+      puts args.state.room[:"row#{i}"].inspect
+
+      #DEBUG iteration
+      #puts "x:#{ii * tile_size}, y: #{i * tile_size}"
+      #puts entities[:"#{c}"]
+    }
+  }
+
 end
 
 
