@@ -1,3 +1,15 @@
+xrepl do
+  args.state.cadeiras ||= {}
+  args.state.cadeiras << cadeira: { w: 10, h: 10, x: 10, y: 10 }
+  puts args.state.cadeiras[:cadeira]
+end
+
+
+
+
+
+
+
 # ===============================================================
 # Welcome to repl.rb
 # ===============================================================

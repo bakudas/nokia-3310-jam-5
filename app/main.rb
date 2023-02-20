@@ -1,7 +1,8 @@
 # VacaRoxa at NOKIAJAM
+#
 # A little game for a nokia game jam
 # https://itch.io/jam/nokiajam5
-# copyleft @bakudas
+# cc0@bakudas
 
 # all consts
 TILE_SIZE = 4
@@ -11,33 +12,43 @@ SCREEN_MULTIPLIER = 10
 SCREEN_WIDTH = 84
 SCREEN_HEIGHT = 48
 
+# level entities 
 entities ||= {
-  "_": :top,
-  "|": :wall,
-  "-": :bottom,
+  "#": :wall,
   "c": :colectable,
   "b": :box,
+  "k": :key,
+  "d": :door,
   "x": :enemy,
   "s": :start,
   "e": :exit
 }
 
+# level design
 room001 ||= [
-  "____s_____",
-  "|        |",
-  "|        e",
-  "|    c   |",
-  "| b      |",
-  "----------"
+  "##########s##########",
+  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb     bbbbbbb#",
+  "e      d     bbbbbbb#",
+  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb  c  bbbbbbb#",
+  "#####################"
 ]
 
 room002 ||= [
-  "__________",
-  "|c      x|",
-  "|bbb     |",
-  "|     bbb|",
-  "e  b     |",
-  "-----s----"
+  "#####################",
+  "#c                  #",
+  "####   #####    x   #",
+  "e  #   #            #",
+  "#  #   #   ##########",
+  "#  #   #            #",
+  "#  d   #            s",
+  "########   ##########",
+  "#  x                #",
+  "#####################"
 ]
 
 def draw_room(args, room, sprites)
@@ -114,30 +125,21 @@ def render args
   args.outputs[:scene].primitives    << args.state.player.sprite!
  
   # DRAW TESTE && DEBUG STUFF
-  args.state.walls ||= {}
-  84.times { |w|
-    args.state.walls << { x: SCREEN_CENTER_H - 42 + (w * TILE_SIZE), 
-                          y: SCREEN_CENTER_V - 24 + (w * TILE_SIZE), 
-                          w: TILE_SIZE, 
-                          h: TILE_SIZE, 
-                          r: 230, 
-                          g: 200, 
-                          b: 100 }
-  }
-  # args.state.walls                  << { x: SCREEN_CENTER_H - 42, 
-  #                                        y: SCREEN_CENTER_V - 24, 
-  #                                        w: TILE_SIZE, 
-  #                                        h: TILE_SIZE, 
-  #                                        r: 200, 
-  #                                        g: 0, 
-  #                                        b: 0 }
+  args.state.wall ||= {}
+  
+  args.state.wall                    << { x: SCREEN_CENTER_H - 10, 
+                                          y: SCREEN_CENTER_V - 10, 
+                                          w: TILE_SIZE, 
+                                          h: TILE_SIZE, 
+                                          r: 200, 
+                                          g: 0, 
+                                          b: 0 }
 
-  args.outputs[:scene].borders      << args.state.walls
-
+  args.outputs[:scene].borders      << args.state.wall
 
   # render camera
-  scene_position                     = calc_scene_position args
-  args.outputs.sprites               << { x: scene_position.x, 
+  scene_position                    = calc_scene_position args
+  args.outputs.sprites              << { x: scene_position.x, 
                                           y: scene_position.y,
                                           w: scene_position.w, 
                                           h: scene_position.h, 
@@ -180,7 +182,9 @@ def render args
 end
 
 # manage all inputs
-def inputs args
+def inputs args, *vector
+  player_bounding_box = args.state.player.shift_rect(args.inputs.left_right, args.inputs.up_down)
+  return unless !(args.state[:wall].intersect_rect? player_bounding_box)
   args.state.player[:x] += args.inputs.left_right * args.state.speed
   args.state.player[:y] += args.inputs.up_down * args.state.speed
 
@@ -262,9 +266,9 @@ end
 # update func
 def tick args
   init args
-  inputs args 
   # looping_animation args
   render args
+  inputs args
 end
 
 # refresh all variables
