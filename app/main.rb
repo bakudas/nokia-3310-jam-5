@@ -28,51 +28,66 @@ ENTITIES = {
 
 # level design
 ROOM001 = [
+  "#####################",
   "##########s##########",
-  "#bbbbbbb  p  bbbbbbb#",
-  "#bbbbbbb     bbbbbbb#",
-  "#bbbbbbb     bbbbbbb#",
-  "#bbbbbbb     bbbbbbb#",
-  "#bbbbbbb     bbbbbbb#",
-  "e      d     bbbbbbb#",
-  "#bbbbbbb     bbbbbbb#",
-  "#bbbbbbb     bbbbbbb#",
-  "#bbbbbbb  c  bbbbbbb#",
-  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbbb   bbbbbbbb#",
+  "#bbbbbbbb p bbbbbbbb#",
+  "#bbbbbbbb   bbbbbbbb#",
+  "#           bbbbbbbb#",
+  "e           bbbbbbbb#",
+  "#           bbbbbbbb#",
+  "#bbbbbbbbbbbbbbbbbbb#",
+  "#bbbbbbbbbbbbbbbbbbb#",
+  "#bbbbbbbbbbbbbbbbbbb#",
   "#####################"
 ].reverse
 
 ROOM002 = [
   "#####################",
-  "#c                  #",
-  "####   #####    x   #",
-  "e  #   #            #",
-  "#  #   #   ##########",
-  "#  #   #            #",
-  "#  d   #           ps",
-  "########   ##########",
-  "#  x                #",
-  "#  x                #",
-  "#  x                #",
+  "#####################",
+  "#bbbbbbbbbbbbbbbbbbb#",
+  "#bbbbbbbbbbbbbbbbbbb#",
+  "#bbbbbbbbbbbbbbbbbbb#",
+  "#  d                #",
+  "e  d    c     c   p s",
+  "#  d                #",
+  "#bbbbbbbbbbbbbbbbbbb#",
+  "#bbbbbbbbbbbbbbbbbbb#",
+  "#bbbbbbbbbbbbbbbbbbb#",
   "#####################"
 ].reverse
 
 ROOM003 = [
   "#####################",
-  "#                   #",
-  "#      bbbb    x    #",
-  "#      b           ps",
-  "#bbb   b   bbbbbbbbb#",
-  "e  b   b            #",
-  "#  d   b         c  #",
-  "#bbbbbbb            #",
-  "#bbbbbbb    bbbbbbbb#",
-  "#bbbbbbb    bbbbbbbb#",
-  "#bbbbbbb    bbbbbbbb#",
+  "#####################",
+  "#      b        x   #",
+  "e      b        c   #",
+  "#      b    bbbbbbbb#",
+  "#      b            #",
+  "#      b          p s",
+  "#      b            #",
+  "#      b d bbbbbbbbb#",
+  "#          bbbbbbbbb#",
+  "#          bbbbbbbbb#",
   "#####################"
 ].reverse
 
-ROOMS = [ROOM001, ROOM002, ROOM003]
+ROOM004 = [
+  "#####################",
+  "#                   #",
+  "# c x             p #",
+  "#                   s",
+  "#bbbb       bbbbbbbb#",
+  "e   b       b       #",
+  "#   b            c  #",
+  "#   d       d       #",
+  "#   d       bbbbbbbb#",
+  "#bbbbbb     bbbbbbbb#",
+  "#bbbbbb  c  bbbbbbbb#",
+  "#####################"
+].reverse
+
+ROOMS = [ROOM001, ROOM002, ROOM003, ROOM004]
 
 def populate_room(args, room)
   args.state.player = []
@@ -157,8 +172,15 @@ def init args
   args.state.speed                   ||= 1
   
   # set colors
+  # SET 01
   args.state.cores                   ||= { primaria: { r: 199, g: 240, b: 216 },
                                            secundaria: { r: 67, g: 82, b: 61 } }
+  # SET 02
+  # args.state.cores                   ||= { primaria: { r: 155, g: 199, b: 0 },
+  #                                          secundaria: { r: 43, g: 63, b: 9 } }
+  # SET 03
+  # args.state.cores                   ||= { primaria: { r: 138, g: 145, b: 136 },
+  #                                          secundaria: { r: 26, g: 25, b: 20 } }
 
   args.state.back                    ||= { x: 0, 
                                            y: 0, 
@@ -204,13 +226,18 @@ def render args
   update_room(args, args.state.level) unless args.state.tick_count != 0
   render_room args unless args.state.tick_count == 0
 
+  args.state.player.w = 8
+  args.state.player.h = 8
+  
   # RENDER PLAYER
   args.outputs[:scene].primitives     << args.state.player.sprite
   
-  # RENDER FPS TEXT
-  args.outputs.primitives << [370, 598, "#{args.gtk.current_framerate.to_sf}", 16, 1, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
+  # RENDER TEXTS
+  # args.outputs.primitives << [370, 598, "#{args.gtk.current_framerate.to_sf}", 16, 1, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
   
-  args.outputs.primitives << [370, 698, "#{args.state.score}", 16, 0, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
+  args.outputs.primitives << [379, 600, "ROOM_#{args.state.level}", 16, 1, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
+  
+  # args.outputs.primitives << [370, 698, "#{args.state.score}", 16, 0, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
 
   # RENDER CAMERA
   render_camera args 
@@ -231,30 +258,46 @@ def render_camera args
                                          path: :scene }
 end
 
+def activate_holding_box args
+  return if !args.state.can_hold 
+
+  args.state[:collectables].reject! { |c| c.intersect_rect? args.state.player_box }
+
+  puts "tou aqui"
+  #puts "x: #{args.state.collectables.x}, y: #{args.state.collectables.y}"
+  #args.state.collectables.x = args.state.player.x + args.inputs.left_right * TILE_SIZE
+  #args.state.collectables.y = args.state.player.y
+end
+
 def calc_collisions args
   args.state.can_move ||= true
-  
+  args.state.can_hold ||= false
   player_temp = args.state.player.shift_rect(args.inputs.left_right, args.inputs.up_down)
-  player_box = [ player_temp.x, player_temp.y, player_temp.w, player_temp.h]
+  args.state.player_box = [ player_temp.x, player_temp.y, player_temp.w, player_temp.h]
 
   # WALLS
-  if (args.state[:boxes].any_intersect_rect?(player_box) or 
-      args.state[:walls].any_intersect_rect?(player_box) or
-      args.state[:doors].any_intersect_rect?(player_box))
+  if (args.state[:boxes].any_intersect_rect?(args.state.player_box) or 
+      args.state[:walls].any_intersect_rect?(args.state.player_box) or
+      args.state[:doors].any_intersect_rect?(args.state.player_box))
     args.state.can_move = false
   else
     args.state.can_move = true
   end
 
   # COLLECTABLES
-  if (args.state[:collectables].any_intersect_rect?(player_box))
-    args.state.collectables.pop
-    args.state.doors.pop
-    args.state.score += 1
+  if (args.state[:collectables].any_intersect_rect?(args.state.player_box))
+    #args.state.collectables.pop
+    #args.state.doors.pop
+    #args.state.score += 1
+    args.state.can_hold = true
+  else
+    args.state.can_hold = false
   end
 
+  
+  
   # GOAL
-  if (args.state[:goal].any_intersect_rect?(player_box))
+  if (args.state[:goal].any_intersect_rect?(args.state.player_box))
     args.state.level += 1
     update_room(args, args.state.level)
   end
@@ -284,12 +327,12 @@ def inputs args, *vector
 
   # TODO - spawn particles when moving
 
-  # flip sprite
-  # if args.inputs.left
-  #   args.state.player.flip_horizontally = true
-  # elsif args.inputs.right
-  #   args.state.player.flip_horizontally = false
-  # end
+  #flip sprite
+  if args.inputs.left
+    args.state.player.flip_horizontally = true
+  elsif args.inputs.right
+    args.state.player.flip_horizontally = false
+  end
 
   # animation
   if args.inputs.left_right != 0 or args.inputs.up_down != 0
@@ -298,6 +341,10 @@ def inputs args, *vector
     args.state.player.path = "/sprites/player/player0.png"
   end
 
+  if args.inputs.keyboard.key_down.space
+    activate_holding_box args
+  end
+  
   args.state.camera.scale = args.state.camera.scale.greater(0.1)
 end
 
@@ -368,4 +415,4 @@ def tick args
 end
 
 # refresh all variables
-$gtk.reset
+#$gtk.reset
