@@ -24,7 +24,7 @@ room001 ||= [
   "#####################"
 ].reverse
 
-repl do
+xrepl do
   args.state.walls = []
   args.state.enemies = []
   args.state.collectables = []
@@ -51,11 +51,12 @@ repl do
       #puts entities[:"#{c}"]
     }
   }
-
 end
 
 
-
+xrepl do
+  args.state.arr = {}
+end
 
 
 

@@ -25,12 +25,10 @@ ENTITIES ||= {
   " ": "/sprites/rooms/empty.png"
 }
 
-
-
 # level design
 ROOM001 = [
   "##########s##########",
-  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb  p  bbbbbbb#",
   "#bbbbbbb     bbbbbbb#",
   "#bbbbbbb     bbbbbbb#",
   "#bbbbbbb     bbbbbbb#",
@@ -38,7 +36,7 @@ ROOM001 = [
   "e      d     bbbbbbb#",
   "#bbbbbbb     bbbbbbb#",
   "#bbbbbbb     bbbbbbb#",
-  "#bbbbbbb     bbbbbbb#",
+  "#bbbbbbb  c  bbbbbbb#",
   "#bbbbbbb     bbbbbbb#",
   "#####################"
 ].reverse
@@ -59,35 +57,78 @@ ROOM002 = [
 ].reverse
 
 def populate_room(args, room, entities)
-  room.each_with_index { |row,i| 
-    args.state.room << {"row#{i}": {} }
+  args.state.player = []
+  args.state.walls = [] 
+  args.state.enemies = []
+  args.state.doors = []
+  args.state.boxes = []
+  args.state.start = []
+  args.state.goal = []
+  args.state.collectables = []
+  args.state.empty = []
 
+  room.each_with_index { |row,i| 
     row.split("").each_with_index { |c,ii| 
-      args.state.room[:"row#{i}"] << { "tile#{i}_#{ii}": { x: SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , y: SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , w: TILE_SIZE , h: TILE_SIZE, r: 155, g: 0, b: 0 } } }      
+      case c 
+      # PLAYER
+      when "p"
+        args.state.player << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+
+      # WALLS
+      when "#"
+        args.state.walls << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+
+      # BOXES
+      when "b"
+        args.state.boxes << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+
+      # START POINTS 
+      when "s"
+        args.state.start << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+
+      # DOOR 
+      when "d"
+        args.state.doors << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+
+      # GOAL POINT
+      when "e"
+        args.state.goal << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+
+      when "c"
+        args.state.collectables << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i ,SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+      
+      when " "
+        args.state.empty << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i ,SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+
+
+      end
+    }
   }
-end
+
+  end
 
 def render_room(args, room, entities)
-  args.state.room ||= {}
-  room.each_with_index { |row,i| 
-    row.split("").each_with_index { |c,ii| 
-      args.outputs[:scene].primitives << { x: SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , y: SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , w: TILE_SIZE , h: TILE_SIZE, path:ENTITIES[:"#{c}"] }.sprite! 
-    }
-  }      
+  args.outputs[:scene].primitives << args.state.walls if args.state.walls != [] 
+  args.outputs[:scene].primitives << args.state.boxes if args.state.boxes != [] 
+  args.outputs[:scene].primitives << args.state.collectables if args.state.collectables != [] 
+  args.outputs[:scene].primitives << args.state.start if args.state.start != [] 
+  args.outputs[:scene].primitives << args.state.doors if args.state.doors != [] 
+  args.outputs[:scene].primitives << args.state.goal if args.state.goal != [] 
+  args.outputs[:scene].primitives << args.state.empty if args.state.empty != []
 end
 
+def spawn_particles args
+  # timer = 0
+  # args.state.particles = {}
+  args.outputs[:scene].primitives << { x: 360, y: 640, w: TILE_SIZE, h: TILE_SIZE, path: "/sprites/misc/dragon-0.png" }.sprite!
+  puts "PUFT!"
+  # timer += (args.state.tick_count / 1000).clamp(0,1); puts timer unless timer >= 1
+
+end
 
 # initial setup
 def init args
-  # args.state.room ||= {}
-
-  # if args.state.room == {} and args.state.tick_count == 0 
-  #   draw_room(args, ROOM001, ENTITIES) 
-  # end
-
-  # set background color
-  # args.outputs.background_color      ||= [0, 0, 0]
-
+  # set camera 
   args.state.camera.x                ||= -1280 * 4.5
   args.state.camera.y                ||= -720 * 4.5
   args.state.camera.scale            ||= 10.0
@@ -146,80 +187,82 @@ def render args
 
   # render game objects
   # args.outputs[:scene].primitives     << args.state.nokia_bg.sprite! 
-  # args.outputs[:scene].primitives     << args.state.back.sprite!
-  # args.outputs[:scene].primitives     << args.state.background.sprite!
+  args.outputs[:scene].primitives     << args.state.back.sprite!
+  args.outputs[:scene].primitives     << args.state.background.sprite!
   
   # RENDER ROOMS
+  populate_room(args, ROOM001, ENTITIES) unless args.state.tick_count != 0
+
   render_room(args, ROOM001, ENTITIES) unless args.state.tick_count == 0
 
-  args.outputs[:scene].primitives     << args.state.player.sprite!
   
-  # render camera
+  args.outputs[:scene].primitives     << args.state.player.sprite
+  
+  args.outputs[:scene].primitives     << [360, 640, 16, 16, 200, 20, 39 ].solid
+    
+  args.outputs.primitives << [370, 598, "#{args.gtk.current_framerate.to_sf}", 16, 1, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
+  
+  # RENDER CAMERA
+  render_camera args 
+
+end
+
+def render_camera args
   scene_position                    = calc_scene_position args
   args.outputs.sprites              << { x: scene_position.x, 
                                          y: scene_position.y,
                                          w: scene_position.w, 
                                          h: scene_position.h, 
                                          path: :scene }
-  
+end
+
+def calc_collisions args
+  player_temp = args.state.player.shift_rect(args.inputs.left_right, args.inputs.up_down)
+  player_box = [ player_temp.x, player_temp.y, player_temp.w, player_temp.h]
+
+  if (args.state[:collectables].any_intersect_rect?(player_box))
+    args.state.collectables.pop
+    args.state.doors.pop
+  end
+
   # set X boundaries
-  if args.state.player[:x] < SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 
-    args.state.player[:x] = SCREEN_CENTER_H + VIRTUAL_SCREEN_WIDTH/2 - TILE_SIZE 
-  elsif args.state.player[:x] > SCREEN_CENTER_H + VIRTUAL_SCREEN_WIDTH/2 - TILE_SIZE
-    args.state.player[:x] = SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + TILE_SIZE
+  if args.state.player.x < SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + TILE_SIZE
+    args.state.player.x = SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + TILE_SIZE
+  elsif args.state.player.x > SCREEN_CENTER_H + VIRTUAL_SCREEN_WIDTH/2 - TILE_SIZE * 2
+    args.state.player.x = SCREEN_CENTER_H + VIRTUAL_SCREEN_WIDTH/2 - TILE_SIZE * 2
   end
 
   # set Y boundaries
-  if args.state.player[:y] < SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 
-    args.state.player[:y] = SCREEN_CENTER_V + VIRTUAL_SCREEN_HEIGHT/2 - TILE_SIZE
-  elsif args.state.player[:y] > SCREEN_CENTER_V + VIRTUAL_SCREEN_HEIGHT/2 - TILE_SIZE
-    args.state.player[:y] = SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + TILE_SIZE
+  if args.state.player.y < SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + TILE_SIZE
+    args.state.player.y = SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + TILE_SIZE
+  elsif args.state.player.y > SCREEN_CENTER_V + VIRTUAL_SCREEN_HEIGHT/2 - TILE_SIZE * 2
+    args.state.player.y = SCREEN_CENTER_V + VIRTUAL_SCREEN_HEIGHT/2 - TILE_SIZE * 2
   end
-
-  # DEBUG TEXTS
-  args.outputs[:scene].primitives   << { x: 1280/2-42, 
-                                         y: 220.from_top, 
-                                         text: "NOKIAJAM", 
-                                         r: 255, 
-                                         g: 255, 
-                                         b: 255}.label!
-  
-  args.outputs[:scene].primitives   << { x: 1280/2-84, 
-                                         y: 240.from_top, 
-                                         text: "copyleft@VacaRoxa", 
-                                         r: 255, 
-                                         g: 255, 
-                                         b: 255}.label!
-
-  # DEBUB TEXT PLAYER
-  args.outputs.labels               << { x: 250, 
-                                         y: 310.from_top, 
-                                         text: "#{args.state.player.y}, #{args.state.player.x}" }
-
 end
 
 # manage all inputs
 def inputs args, *vector
-  player_bounding_box = args.state.player.shift_rect(args.inputs.left_right, args.inputs.up_down)
-  return unless !(args.state.room.any_intersect_rect? player_bounding_box)
-  args.state.player[:x] += args.inputs.left_right * args.state.speed
-  args.state.player[:y] += args.inputs.up_down * args.state.speed
+ 
+  args.state.player.x += args.inputs.left_right * args.state.speed
+  args.state.player.y += args.inputs.up_down * args.state.speed
+
+  # TODO - spawn particles when moving
 
   # flip sprite
   if args.inputs.left
-    args.state.player[:flip_horizontally] = true
+    args.state.player.flip_horizontally = true
   elsif args.inputs.right
-    args.state.player[:flip_horizontally] = false
+    args.state.player.flip_horizontally = false
   end
 
   # animation
   if args.inputs.left_right != 0 or args.inputs.up_down != 0
     looping_animation args 
   else
-    args.state.player[:path] = "/sprites/player/player0.png"
+    args.state.player.path = "/sprites/player/player0.png"
   end
 
-  args.state.camera.scale = args.state.camera.scale.greater(0.2)
+  args.state.camera.scale = args.state.camera.scale.greater(0.1)
 end
 
 def calc_scene_position args
@@ -277,7 +320,7 @@ def looping_animation args
                                               number_of_frames_to_show_each_sprite,
                                               does_sprite_loop
 
-  args.state.player[:path] = "sprites/player/player#{sprite_index}.png"
+  args.state.player.path = "sprites/player/player#{sprite_index}.png"
 end
 
 # update func
@@ -285,6 +328,7 @@ def tick args
   init args
   # looping_animation args
   render args
+  calc_collisions args
   inputs args
 end
 
