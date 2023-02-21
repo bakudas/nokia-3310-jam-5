@@ -22,7 +22,8 @@ ENTITIES = {
   "x": "/sprites/enemies/enemies.png",
   "s": "/sprites/rooms/start.png",
   "e": "/sprites/rooms/exit.png",
-  " ": "/sprites/rooms/empty.png"
+  " ": "/sprites/rooms/empty.png",
+  "p": "/sprites/player/player0.png"
 }
 
 # level design
@@ -58,22 +59,22 @@ ROOM002 = [
 
 ROOM003 = [
   "#####################",
-  "#c                  #",
-  "#bbb   bbbb    x    #",
+  "#                   #",
+  "#      bbbb    x    #",
+  "#      b           ps",
+  "#bbb   b   bbbbbbbbb#",
   "e  b   b            #",
-  "#  b   b   bbbbbbbbb#",
-  "#  b   b            #",
-  "#  d   b          p s",
+  "#  d   b         c  #",
   "#bbbbbbb            #",
-  "#bbbbbbb   bbbbbbbbb#",
-  "#bbbbbbb   bbbbbbbbb#",
-  "#bbbbbbb   bbbbbbbbb#",
+  "#bbbbbbb    bbbbbbbb#",
+  "#bbbbbbb    bbbbbbbb#",
+  "#bbbbbbb    bbbbbbbb#",
   "#####################"
 ].reverse
 
 ROOMS = [ROOM001, ROOM002, ROOM003]
 
-def populate_room(args, room, entities)
+def populate_room(args, room)
   args.state.player = []
   args.state.walls = [] 
   args.state.enemies = []
@@ -84,39 +85,45 @@ def populate_room(args, room, entities)
   args.state.collectables = []
   args.state.empty = []
 
+  temp_tile = []
+
   room.each_with_index { |row,i| 
-    row.split("").each_with_index { |c,ii| 
-      case c 
+
+    row.split("").each_with_index { |char,ii| 
+      
+      temp_tile = [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{char}"] ].sprite
+
+      case char 
+
       # PLAYER
       when "p"
-        args.state.player << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+        args.state.player << temp_tile
 
       # WALLS
       when "#"
-        args.state.walls << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+        args.state.walls << temp_tile
 
       # BOXES
       when "b"
-        args.state.boxes << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+        args.state.boxes << temp_tile
 
       # START POINTS 
       when "s"
-        args.state.start << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+        args.state.start << temp_tile
 
       # DOOR 
       when "d"
-        args.state.doors << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+        args.state.doors << temp_tile
 
       # GOAL POINT
       when "e"
-        args.state.goal << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i , SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+        args.state.goal << temp_tile
 
       when "c"
-        args.state.collectables << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i ,SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
-      
-      when " "
-        args.state.empty << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i ,SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
+        args.state.collectables << temp_tile      
 
+      when " "
+        args.state.empty << temp_tile
       end
     }
   }
@@ -135,12 +142,7 @@ def render_room args
 end
 
 def spawn_particles args
-  # timer = 0
-  # args.state.particles = {}
-  args.outputs[:scene].primitives << { x: 360, y: 640, w: TILE_SIZE, h: TILE_SIZE, path: "/sprites/misc/dragon-0.png" }.sprite!
-  puts "PUFT!"
-  # timer += (args.state.tick_count / 1000).clamp(0,1); puts timer unless timer >= 1
-
+  # TODO spawn particles
 end
 
 # initial setup
@@ -179,8 +181,9 @@ def init args
   args.state.score                   ||= 0
 
   # set current ROOM
-  args.state.current_room            ||= ROOMS[args.state.score]
- 
+  args.state.level                   ||= 0
+  args.state.current_room            ||= ROOMS[args.state.level]
+  
 end
 
 # all renders goes here
@@ -198,7 +201,7 @@ def render args
   args.outputs[:scene].primitives     << args.state.background.sprite!
   
   # RENDER ROOMS
-  populate_room(args, args.state.current_room, ENTITIES) unless args.state.tick_count != 0
+  update_room(args, args.state.level) unless args.state.tick_count != 0
   render_room args unless args.state.tick_count == 0
 
   # RENDER PLAYER
@@ -212,6 +215,11 @@ def render args
   # RENDER CAMERA
   render_camera args 
 
+end
+
+def update_room(args, level)
+  args.state.current_room = ROOMS[level]
+  populate_room(args, args.state.current_room)
 end
 
 def render_camera args
@@ -229,20 +237,26 @@ def calc_collisions args
   player_temp = args.state.player.shift_rect(args.inputs.left_right, args.inputs.up_down)
   player_box = [ player_temp.x, player_temp.y, player_temp.w, player_temp.h]
 
-  if (args.state[:boxes].any_intersect_rect?(player_box) or args.state[:walls].any_intersect_rect?(player_box))
+  # WALLS
+  if (args.state[:boxes].any_intersect_rect?(player_box) or 
+      args.state[:walls].any_intersect_rect?(player_box) or
+      args.state[:doors].any_intersect_rect?(player_box))
     args.state.can_move = false
   else
     args.state.can_move = true
   end
 
+  # COLLECTABLES
   if (args.state[:collectables].any_intersect_rect?(player_box))
     args.state.collectables.pop
     args.state.doors.pop
     args.state.score += 1
-    args.state.current_room = ROOMS[args.state.score]
-    # RENDER ROOMS
-    populate_room(args, args.state.current_room, ENTITIES)
-    #render_room args
+  end
+
+  # GOAL
+  if (args.state[:goal].any_intersect_rect?(player_box))
+    args.state.level += 1
+    update_room(args, args.state.level)
   end
 
   # set X boundaries
@@ -271,11 +285,11 @@ def inputs args, *vector
   # TODO - spawn particles when moving
 
   # flip sprite
-  if args.inputs.left
-    args.state.player.flip_horizontally = true
-  elsif args.inputs.right
-    args.state.player.flip_horizontally = false
-  end
+  # if args.inputs.left
+  #   args.state.player.flip_horizontally = true
+  # elsif args.inputs.right
+  #   args.state.player.flip_horizontally = false
+  # end
 
   # animation
   if args.inputs.left_right != 0 or args.inputs.up_down != 0
@@ -348,10 +362,9 @@ end
 # update func
 def tick args
   init args
-  # looping_animation args
   render args
-  calc_collisions args
-  inputs args
+  calc_collisions args unless args.state.player == []
+  inputs args unless args.state.player == []
 end
 
 # refresh all variables
