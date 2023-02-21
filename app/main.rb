@@ -13,7 +13,7 @@ VIRTUAL_SCREEN_WIDTH = 84
 VIRTUAL_SCREEN_HEIGHT = 48
 
 # level entities 
-ENTITIES ||= {
+ENTITIES = {
   "#": "/sprites/rooms/wall.png",
   "c": "/sprites/rooms/collectable.png",
   "b": "/sprites/rooms/box.png",
@@ -48,13 +48,30 @@ ROOM002 = [
   "e  #   #            #",
   "#  #   #   ##########",
   "#  #   #            #",
-  "#  d   #            s",
+  "#  d   #           ps",
   "########   ##########",
   "#  x                #",
   "#  x                #",
   "#  x                #",
   "#####################"
 ].reverse
+
+ROOM003 = [
+  "#####################",
+  "#c                  #",
+  "#bbb   bbbb    x    #",
+  "e  b   b            #",
+  "#  b   b   bbbbbbbbb#",
+  "#  b   b            #",
+  "#  d   b          p s",
+  "#bbbbbbb            #",
+  "#bbbbbbb   bbbbbbbbb#",
+  "#bbbbbbb   bbbbbbbbb#",
+  "#bbbbbbb   bbbbbbbbb#",
+  "#####################"
+].reverse
+
+ROOMS = [ROOM001, ROOM002, ROOM003]
 
 def populate_room(args, room, entities)
   args.state.player = []
@@ -100,14 +117,13 @@ def populate_room(args, room, entities)
       when " "
         args.state.empty << [ SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + "#{ii * TILE_SIZE}".to_i ,SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + "#{i * TILE_SIZE}".to_i , TILE_SIZE , TILE_SIZE, ENTITIES[:"#{c}"] ].sprite
 
-
       end
     }
   }
 
   end
 
-def render_room(args, room, entities)
+def render_room args
   args.outputs[:scene].primitives << args.state.walls if args.state.walls != [] 
   args.outputs[:scene].primitives << args.state.boxes if args.state.boxes != [] 
   args.outputs[:scene].primitives << args.state.collectables if args.state.collectables != [] 
@@ -115,6 +131,7 @@ def render_room(args, room, entities)
   args.outputs[:scene].primitives << args.state.doors if args.state.doors != [] 
   args.outputs[:scene].primitives << args.state.goal if args.state.goal != [] 
   args.outputs[:scene].primitives << args.state.empty if args.state.empty != []
+  args.outputs[:scene].primitives << args.state.player if args.state.player != []
 end
 
 def spawn_particles args
@@ -149,13 +166,6 @@ def init args
                                            g: 35, 
                                            b: 35 }
 
-  # args.state.nokia_bg                ||= { x: (1280-VIRTUAL_SCREEN_WIDTH)/2-35, 
-  #                                          y: (720-VIRTUAL_SCREEN_HEIGHT)/2-142, 
-  #                                          w: 640/4,
-  #                                          h: 1177/4.5, 
-  #                                          path: '/sprites/misc/Nokia_3310.png' }
-  
-
   # create background with color 1
   args.state.background              ||= { x: (1280-VIRTUAL_SCREEN_WIDTH)/2, 
                                            y: (720-VIRTUAL_SCREEN_HEIGHT)/2, 
@@ -165,43 +175,40 @@ def init args
                                            g: args.state.cores.primaria[:g], 
                                            b: args.state.cores.primaria[:b] }
 
+  # set collectables
+  args.state.score                   ||= 0
 
-  # create player with color 2
-  args.state.player                  ||= { x: 1280/2, 
-                                           y: 720/2,
-                                           w: TILE_SIZE, 
-                                           h: TILE_SIZE,  
-                                           path: "/sprites/player/player0.png", 
-                                           flip_horizontally: true }
+  # set current ROOM
+  args.state.current_room            ||= ROOMS[args.state.score]
+ 
 end
 
 # all renders goes here
 def render args
-  # variables you can play around with
+  # set world variable
   args.state.world.w                 ||= 1280
   args.state.world.h                 ||= 720
 
-  # render scene
+  # RENDER VIRTUAL SCENE
   args.outputs[:scene].w             ||= args.state.world.w
   args.outputs[:scene].h             ||= args.state.world.h
 
-  # render game objects
-  # args.outputs[:scene].primitives     << args.state.nokia_bg.sprite! 
+  # RENDER BG STUFF
   args.outputs[:scene].primitives     << args.state.back.sprite!
   args.outputs[:scene].primitives     << args.state.background.sprite!
   
   # RENDER ROOMS
-  populate_room(args, ROOM001, ENTITIES) unless args.state.tick_count != 0
+  populate_room(args, args.state.current_room, ENTITIES) unless args.state.tick_count != 0
+  render_room args unless args.state.tick_count == 0
 
-  render_room(args, ROOM001, ENTITIES) unless args.state.tick_count == 0
-
-  
+  # RENDER PLAYER
   args.outputs[:scene].primitives     << args.state.player.sprite
   
-  args.outputs[:scene].primitives     << [360, 640, 16, 16, 200, 20, 39 ].solid
-    
+  # RENDER FPS TEXT
   args.outputs.primitives << [370, 598, "#{args.gtk.current_framerate.to_sf}", 16, 1, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
   
+  args.outputs.primitives << [370, 698, "#{args.state.score}", 16, 0, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
+
   # RENDER CAMERA
   render_camera args 
 
@@ -217,32 +224,47 @@ def render_camera args
 end
 
 def calc_collisions args
+  args.state.can_move ||= true
+  
   player_temp = args.state.player.shift_rect(args.inputs.left_right, args.inputs.up_down)
   player_box = [ player_temp.x, player_temp.y, player_temp.w, player_temp.h]
+
+  if (args.state[:boxes].any_intersect_rect?(player_box) or args.state[:walls].any_intersect_rect?(player_box))
+    args.state.can_move = false
+  else
+    args.state.can_move = true
+  end
 
   if (args.state[:collectables].any_intersect_rect?(player_box))
     args.state.collectables.pop
     args.state.doors.pop
+    args.state.score += 1
+    args.state.current_room = ROOMS[args.state.score]
+    # RENDER ROOMS
+    populate_room(args, args.state.current_room, ENTITIES)
+    #render_room args
   end
 
   # set X boundaries
-  if args.state.player.x < SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + TILE_SIZE
-    args.state.player.x = SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + TILE_SIZE
-  elsif args.state.player.x > SCREEN_CENTER_H + VIRTUAL_SCREEN_WIDTH/2 - TILE_SIZE * 2
-    args.state.player.x = SCREEN_CENTER_H + VIRTUAL_SCREEN_WIDTH/2 - TILE_SIZE * 2
-  end
+  # if args.state.player.x < SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + TILE_SIZE
+  #   args.state.player.x = SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + TILE_SIZE
+  # elsif args.state.player.x > SCREEN_CENTER_H + VIRTUAL_SCREEN_WIDTH/2 - TILE_SIZE * 2
+  #   args.state.player.x = SCREEN_CENTER_H + VIRTUAL_SCREEN_WIDTH/2 - TILE_SIZE * 2
+  # end
 
   # set Y boundaries
-  if args.state.player.y < SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + TILE_SIZE
-    args.state.player.y = SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + TILE_SIZE
-  elsif args.state.player.y > SCREEN_CENTER_V + VIRTUAL_SCREEN_HEIGHT/2 - TILE_SIZE * 2
-    args.state.player.y = SCREEN_CENTER_V + VIRTUAL_SCREEN_HEIGHT/2 - TILE_SIZE * 2
-  end
+  # if args.state.player.y < SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + TILE_SIZE
+  #   args.state.player.y = SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + TILE_SIZE
+  # elsif args.state.player.y > SCREEN_CENTER_V + VIRTUAL_SCREEN_HEIGHT/2 - TILE_SIZE * 2
+  #   args.state.player.y = SCREEN_CENTER_V + VIRTUAL_SCREEN_HEIGHT/2 - TILE_SIZE * 2
+  # end
 end
 
 # manage all inputs
 def inputs args, *vector
- 
+
+  return unless args.state.can_move
+
   args.state.player.x += args.inputs.left_right * args.state.speed
   args.state.player.y += args.inputs.up_down * args.state.speed
 
