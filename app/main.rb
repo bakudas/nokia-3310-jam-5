@@ -29,13 +29,13 @@ ENTITIES = {
 # level design
 ROOM001 = [
   "#####################",
-  "##########s##########",
+  "#########sss#########",
   "#bbbbbbbb   bbbbbbbb#",
   "#bbbbbbbb p bbbbbbbb#",
   "#bbbbbbbb   bbbbbbbb#",
-  "#           bbbbbbbb#",
   "e           bbbbbbbb#",
-  "#           bbbbbbbb#",
+  "e           bbbbbbbb#",
+  "e           bbbbbbbb#",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#bbbbbbbbbbbbbbbbbbb#",
@@ -47,11 +47,11 @@ ROOM002 = [
   "#####################",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#bbbbbbbbbbbbbbbbbbb#",
-  "#bbb    c     d     #",
-  "#                   #",
-  "e                 p s",
-  "#                   #",
-  "#bbb    d     c     #",
+  "#bbb                #",
+  "e  d         c      s",
+  "e  d       c      p s",
+  "e  d     c          s",
+  "#bbb                #",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#####################"
@@ -60,13 +60,13 @@ ROOM002 = [
 ROOM003 = [
   "#####################",
   "#####################",
-  "#      b        x   #",
+  "e      b        x   #",
   "e      b        c   #",
-  "#      b    bbbbbbbb#",
-  "#      b            #",
+  "e      b    bbbbbbbb#",
+  "#      b            s",
   "#      b          p s",
-  "#      b            #",
-  "#      b d bbbbbbbbb#",
+  "#      b            s",
+  "#      bdddbbbbbbbbb#",
   "#          bbbbbbbbb#",
   "#          bbbbbbbbb#",
   "#####################"
@@ -74,13 +74,13 @@ ROOM003 = [
 
 ROOM004 = [
   "#####################",
-  "#                   #",
-  "# c x             p #",
-  "#                   s",
-  "#bbbb       bbbbbbbb#",
-  "e   b       b       #",
-  "#   b            c  #",
-  "#   d       d       #",
+  "#####################",
+  "# c x               s",
+  "#                 p s",
+  "#bbbb               s",
+  "e   b       bbbbbbbb#",
+  "e   b       d    c  #",
+  "e   d       d       #",
   "#   d       bbbbbbbb#",
   "#bbbbbb     bbbbbbbb#",
   "#bbbbbb  c  bbbbbbbb#",
@@ -90,6 +90,10 @@ ROOM004 = [
 ROOMS = [ROOM001, ROOM002, ROOM003, ROOM004]
 
 def populate_room(args, room)
+  # BLOCK ANY ROOM INTERACTION TO UPDATE AND RENDER
+  args.state.room_is_ready = false
+
+  # MAKE SURE ALL ARRAYS ARE EMPTY
   args.state.player = []
   args.state.walls = [] 
   args.state.enemies = []
@@ -100,8 +104,10 @@ def populate_room(args, room)
   args.state.collectables = []
   args.state.empty = []
 
+  # EMPTY TEMP_TILE AS WELL
   temp_tile = []
 
+  # LETS ITERATE THE CURRENT ROOM ARRAY
   room.each_with_index { |row,i| 
 
     row.split("").each_with_index { |char,ii| 
@@ -146,22 +152,24 @@ def populate_room(args, room)
   end
 
 def render_room args
-  args.outputs[:scene].primitives << args.state.empty if args.state.empty != []
-  args.outputs[:scene].primitives << args.state.walls if args.state.walls != [] 
-  args.outputs[:scene].primitives << args.state.boxes if args.state.boxes != [] 
+  args.outputs[:scene].primitives << args.state.empty.map { |e| e } if args.state.empty != []
+  args.outputs[:scene].primitives << args.state.walls.map { |wall| wall } if args.state.walls != [] 
+  args.outputs[:scene].primitives << args.state.boxes.map { |box| box } if args.state.boxes != [] 
   args.outputs[:scene].primitives << args.state.collectables if args.state.collectables != [] 
   args.outputs[:scene].primitives << args.state.start if args.state.start != [] 
   args.outputs[:scene].primitives << args.state.doors if args.state.doors != [] 
   args.outputs[:scene].primitives << args.state.goal if args.state.goal != [] 
   args.outputs[:scene].primitives << args.state.player if args.state.player != []
-end
 
-def spawn_particles args
-  # TODO spawn particles
+  # WITH ALL SET UP, LIBERATE THE ROOM
+  args.state.room_is_ready = true
 end
 
 # initial setup
 def init args
+  # RENDER SETUP
+  args.state.room_is_ready            ||= false
+
   # set camera 
   args.state.camera.x                 ||= -1280 * 4.5
   args.state.camera.y                 ||= -720 * 4.5
@@ -171,6 +179,7 @@ def init args
   # PLAYER MECHANICS
   args.state.is_moving                ||= false
   args.state.is_kicking               ||= false
+  args.state.has_projectile           ||= false
   args.state.can_move                 ||= true
   args.state.can_kick                 ||= false
   args.state.can_put                  ||= false
@@ -178,9 +187,9 @@ def init args
 
   # set speed
   args.state.speed                    ||= 1
+  args.state.bullet_speed             ||= 1
   
   # set colors
-  # SET 01
   args.state.cor_primaria             ||= { r: 199, g: 240, b: 216 }
   args.state.cor_secundaria           ||= { r: 67, g: 82, b: 61 }
 
@@ -201,13 +210,9 @@ def init args
                                             g: args.state.cor_primaria[:g],
                                             b: args.state.cor_primaria[:b] }
 
-  # set collectables
-  args.state.score                    ||= 0
-
   # set current ROOM
   args.state.level                    ||= 0
   args.state.current_room             ||= ROOMS[args.state.level]
-  
 end
 
 # all renders goes here
@@ -235,10 +240,15 @@ def render args
   # RENDER PLAYER
   args.outputs[:scene].primitives     << args.state.player.sprite
   
+  # RENDER PROJECTILES
+  args.state.projectiles ||= []
+  args.outputs[:scene].primitives   << args.state.projectiles.sprite if args.state.has_projectile
+  bullet_movement args if args.state.has_projectile
+
   # RENDER TEXTS
   if args.state.can_kick
-    args.outputs[:scene].labels       << [ (1280+VIRTUAL_SCREEN_WIDTH)/2+1, 
-                                           (720+VIRTUAL_SCREEN_HEIGHT)/2+1, 
+    args.outputs[:scene].labels       << [ (1280+VIRTUAL_SCREEN_WIDTH)/2, 
+                                           (720+VIRTUAL_SCREEN_HEIGHT)/2, 
                                            "KICK IT!", 
                                            -8, 
                                            2, 
@@ -249,8 +259,8 @@ def render args
                                            'fonts/tiny.ttf' ].label
   end
 
-  args.outputs[:scene].labels         << [ (1280-VIRTUAL_SCREEN_WIDTH)/2, 
-                                           (720+VIRTUAL_SCREEN_HEIGHT)/2+1, 
+  args.outputs[:scene].labels         << [ (1280-VIRTUAL_SCREEN_WIDTH)/2+1, 
+                                           (720+VIRTUAL_SCREEN_HEIGHT)/2, 
                                            "ROOM_#{args.state.level}", 
                                            -8, 
                                            0, 
@@ -262,7 +272,6 @@ def render args
   
   # RENDER CAMERA
   render_camera args 
-
 end
 
 # UPDATE THE GAME OBJECTS FORM THE ROOMS
@@ -293,11 +302,10 @@ def calc_collisions args
       args.state[:collectables].any_intersect_rect?(args.state.player_box))
     
     args.state.can_move               = false
+    args.state.is_moving              = false
   else
     args.state.can_move               = true
   end
-  
-  # DOORS
   
   # COLLECTABLE 
   if (args.state[:collectables].any_intersect_rect? args.state.player_box) && !args.state.is_kicking
@@ -306,6 +314,13 @@ def calc_collisions args
     args.state.can_kick               = false
   end
   
+  args.state.projectiles.each { |projectile|
+    args.state.doors.each { |door|
+      if door.any_intersect_rect? projectile
+        puts "#{projectile}, #{door}"
+      end
+    }
+  } unless args.state.projectiles == []
   # GOAL
   if (args.state[:goal].any_intersect_rect?(args.state.player_box))
     args.state.level                  += 1
@@ -313,40 +328,54 @@ def calc_collisions args
   end
 end
 
-# manage all inputs
-def inputs args, *vector
-  return unless args.state.can_move
+# PROCESS THE INPUTS
+def process_inputs args
+  # MOVE PLAYER
+  if args.state.can_move
+    args.state.is_moving              = (args.inputs.left_right != 0 || args.inputs.up_down != 0) ? true : false
+
+    args.state.player.x               += args.inputs.left_right * args.state.speed
+    args.state.player.y               += args.inputs.up_down * args.state.speed
+  end
   
-  args.state.is_moving              = (args.inputs.left_right != 0 || args.inputs.up_down != 0) ? true : false
-
-  args.state.player.x               += args.inputs.left_right * args.state.speed
-  args.state.player.y               += args.inputs.up_down * args.state.speed
-
   # TODO - spawn particles when moving
 
   #flip sprite
   if args.inputs.left
     args.state.player.flip_horizontally = true
+    args.state.bullet_speed = -1 unless args.state.has_projectile
   elsif args.inputs.right
     args.state.player.flip_horizontally = false
+    args.state.bullet_speed = 1 unless args.state.has_projectile
   end
 
   # animation
-  if args.inputs.left_right != 0 or args.inputs.up_down != 0
+  if args.state.can_move && args.state.is_moving
     looping_animation args 
   else
     args.state.player.path          = "/sprites/player/player0.png"
   end
 
   # KICK MECHANICS
-  if (args.inputs.keyboard.key_held.space) && args.state.can_kick
-    kick_block args
-    args.state.player.path          = "/sprites/player/player3.png"
+  if args.inputs.keyboard.key_down.space && args.state.can_kick
+    args.state.is_kicking           = true
+    args.state.is_moving            = false
+    # TODO args.state.player.path          = "/sprites/player/player2.png"
+    args.state.has_projectile       = true
+    args.state.projectiles          << args.state.collectables.find { |c| c.intersect_rect?(args.state.player_box) }
+    puts args.state.projectiles
+    args.state.collectables.reject! { |c| c.intersect_rect?(args.state.player_box) }
+  else
+    args.state.is_kicking           = false
   end
-  
-  args.state.camera.scale           = args.state.camera.scale.greater(0.1)
 end
 
+# KICK MECHANICS
+def bullet_movement args
+  args.state.projectiles.x += args.state.bullet_speed  
+end
+
+# CALCULATE VIRTUAL CAMERA POSITION
 def calc_scene_position args
   result                            = { x: args.state.camera.x,
                                         y: args.state.camera.y,
@@ -394,9 +423,9 @@ end
 def tick args
   init args
   render args
-  calc_collisions args              unless args.state.player == []
-  inputs args                       unless args.state.player == []
+  calc_collisions args              unless !args.state.room_is_ready
+  process_inputs args               unless !args.state.room_is_ready
 end
 
 # refresh all variables
-# $gtk.reset
+$gtk.reset
