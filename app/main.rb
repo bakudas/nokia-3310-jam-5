@@ -47,11 +47,11 @@ ROOM002 = [
   "#####################",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#bbbbbbbbbbbbbbbbbbb#",
-  "#bbbbbbbbbbbbbbbbbbb#",
-  "#  d                #",
-  "e  d    c     c   p s",
-  "#  d                #",
-  "#bbbbbbbbbbbbbbbbbbb#",
+  "#bbb    c     d     #",
+  "#                   #",
+  "e                 p s",
+  "#                   #",
+  "#bbb    d     c     #",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#####################"
@@ -146,13 +146,13 @@ def populate_room(args, room)
   end
 
 def render_room args
+  args.outputs[:scene].primitives << args.state.empty if args.state.empty != []
   args.outputs[:scene].primitives << args.state.walls if args.state.walls != [] 
   args.outputs[:scene].primitives << args.state.boxes if args.state.boxes != [] 
   args.outputs[:scene].primitives << args.state.collectables if args.state.collectables != [] 
   args.outputs[:scene].primitives << args.state.start if args.state.start != [] 
   args.outputs[:scene].primitives << args.state.doors if args.state.doors != [] 
   args.outputs[:scene].primitives << args.state.goal if args.state.goal != [] 
-  args.outputs[:scene].primitives << args.state.empty if args.state.empty != []
   args.outputs[:scene].primitives << args.state.player if args.state.player != []
 end
 
@@ -163,60 +163,62 @@ end
 # initial setup
 def init args
   # set camera 
-  args.state.camera.x                ||= -1280 * 4.5
-  args.state.camera.y                ||= -720 * 4.5
-  args.state.camera.scale            ||= 10.0
-  args.state.camera.show_empty_space ||= :yes
+  args.state.camera.x                 ||= -1280 * 4.5
+  args.state.camera.y                 ||= -720 * 4.5
+  args.state.camera.scale             ||= 10.0
+  args.state.camera.show_empty_space  ||= :yes
+  
+  # PLAYER MECHANICS
+  args.state.is_moving                ||= false
+  args.state.is_kicking               ||= false
+  args.state.can_move                 ||= true
+  args.state.can_kick                 ||= false
+  args.state.can_put                  ||= false
+  args.state.carry_max                ||= 1
 
   # set speed
-  args.state.speed                   ||= 1
+  args.state.speed                    ||= 1
   
   # set colors
   # SET 01
-  args.state.cores                   ||= { primaria: { r: 199, g: 240, b: 216 },
-                                           secundaria: { r: 67, g: 82, b: 61 } }
-  # SET 02
-  # args.state.cores                   ||= { primaria: { r: 155, g: 199, b: 0 },
-  #                                          secundaria: { r: 43, g: 63, b: 9 } }
-  # SET 03
-  # args.state.cores                   ||= { primaria: { r: 138, g: 145, b: 136 },
-  #                                          secundaria: { r: 26, g: 25, b: 20 } }
+  args.state.cor_primaria             ||= { r: 199, g: 240, b: 216 }
+  args.state.cor_secundaria           ||= { r: 67, g: 82, b: 61 }
 
-  args.state.back                    ||= { x: 0, 
-                                           y: 0, 
-                                           w: 1280, 
-                                           h: 720, 
-                                           r: 35, 
-                                           g: 35, 
-                                           b: 35 }
+  args.state.back                     ||= { x: 0, 
+                                            y: 0, 
+                                            w: 1280, 
+                                            h: 720, 
+                                            r: 35, 
+                                            g: 35, 
+                                            b: 35 }
 
   # create background with color 1
-  args.state.background              ||= { x: (1280-VIRTUAL_SCREEN_WIDTH)/2, 
-                                           y: (720-VIRTUAL_SCREEN_HEIGHT)/2, 
-                                           w: VIRTUAL_SCREEN_WIDTH, 
-                                           h: VIRTUAL_SCREEN_HEIGHT, 
-                                           r: args.state.cores.primaria[:r], 
-                                           g: args.state.cores.primaria[:g], 
-                                           b: args.state.cores.primaria[:b] }
+  args.state.background               ||= { x: (1280-VIRTUAL_SCREEN_WIDTH)/2, 
+                                            y: (720-VIRTUAL_SCREEN_HEIGHT)/2, 
+                                            w: VIRTUAL_SCREEN_WIDTH, 
+                                            h: VIRTUAL_SCREEN_HEIGHT, 
+                                            r: args.state.cor_primaria[:r],
+                                            g: args.state.cor_primaria[:g],
+                                            b: args.state.cor_primaria[:b] }
 
   # set collectables
-  args.state.score                   ||= 0
+  args.state.score                    ||= 0
 
   # set current ROOM
-  args.state.level                   ||= 0
-  args.state.current_room            ||= ROOMS[args.state.level]
+  args.state.level                    ||= 0
+  args.state.current_room             ||= ROOMS[args.state.level]
   
 end
 
 # all renders goes here
 def render args
   # set world variable
-  args.state.world.w                 ||= 1280
-  args.state.world.h                 ||= 720
+  args.state.world.w                  ||= 1280
+  args.state.world.h                  ||= 720
 
   # RENDER VIRTUAL SCENE
-  args.outputs[:scene].w             ||= args.state.world.w
-  args.outputs[:scene].h             ||= args.state.world.h
+  args.outputs[:scene].w              ||= args.state.world.w
+  args.outputs[:scene].h              ||= args.state.world.h
 
   # RENDER BG STUFF
   args.outputs[:scene].primitives     << args.state.back.sprite!
@@ -224,106 +226,101 @@ def render args
   
   # RENDER ROOMS
   update_room(args, args.state.level) unless args.state.tick_count != 0
-  render_room args unless args.state.tick_count == 0
+  render_room args                    unless args.state.tick_count == 0
 
-  args.state.player.w = 8
-  args.state.player.h = 8
+  # PLAYER STUFF
+  args.state.player.w                 = 8
+  args.state.player.h                 = 8
   
   # RENDER PLAYER
   args.outputs[:scene].primitives     << args.state.player.sprite
   
   # RENDER TEXTS
-  # args.outputs.primitives << [370, 598, "#{args.gtk.current_framerate.to_sf}", 16, 1, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
-  
-  args.outputs.primitives << [379, 600, "ROOM_#{args.state.level}", 16, 1, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
-  
-  # args.outputs.primitives << [370, 698, "#{args.state.score}", 16, 0, args.state.cores.primaria[:r], args.state.cores.primaria[:g], args.state.cores.primaria[:b], 255, 'fonts/dragonruby-gtk-4x4.ttf'].label
+  if args.state.can_kick
+    args.outputs[:scene].labels       << [ (1280+VIRTUAL_SCREEN_WIDTH)/2+1, 
+                                           (720+VIRTUAL_SCREEN_HEIGHT)/2+1, 
+                                           "KICK IT!", 
+                                           -8, 
+                                           2, 
+                                           args.state.cor_primaria[:r], 
+                                           args.state.cor_primaria[:g], 
+                                           args.state.cor_primaria[:b], 
+                                           255, 
+                                           'fonts/tiny.ttf' ].label
+  end
 
+  args.outputs[:scene].labels         << [ (1280-VIRTUAL_SCREEN_WIDTH)/2, 
+                                           (720+VIRTUAL_SCREEN_HEIGHT)/2+1, 
+                                           "ROOM_#{args.state.level}", 
+                                           -8, 
+                                           0, 
+                                           args.state.cor_primaria[:r], 
+                                           args.state.cor_primaria[:g], 
+                                           args.state.cor_primaria[:b], 
+                                           255, 
+                                           'fonts/tiny.ttf' ]
+  
   # RENDER CAMERA
   render_camera args 
 
 end
 
+# UPDATE THE GAME OBJECTS FORM THE ROOMS
 def update_room(args, level)
-  args.state.current_room = ROOMS[level]
+  args.state.current_room             = ROOMS[level]
   populate_room(args, args.state.current_room)
 end
 
+# RENDER THE VIRTUAL CAMERA
 def render_camera args
-  scene_position                    = calc_scene_position args
-  args.outputs.sprites              << { x: scene_position.x, 
-                                         y: scene_position.y,
-                                         w: scene_position.w, 
-                                         h: scene_position.h, 
-                                         path: :scene }
-end
-
-def activate_holding_box args
-  return if !args.state.can_hold 
-
-  args.state[:collectables].reject! { |c| c.intersect_rect? args.state.player_box }
-
-  puts "tou aqui"
-  #puts "x: #{args.state.collectables.x}, y: #{args.state.collectables.y}"
-  #args.state.collectables.x = args.state.player.x + args.inputs.left_right * TILE_SIZE
-  #args.state.collectables.y = args.state.player.y
+  scene_position                      = calc_scene_position args
+  args.outputs.sprites                << { x: scene_position.x, 
+                                           y: scene_position.y,
+                                           w: scene_position.w, 
+                                           h: scene_position.h, 
+                                           path: :scene }
 end
 
 def calc_collisions args
-  args.state.can_move ||= true
-  args.state.can_hold ||= false
-  player_temp = args.state.player.shift_rect(args.inputs.left_right, args.inputs.up_down)
-  args.state.player_box = [ player_temp.x, player_temp.y, player_temp.w, player_temp.h]
+  # PLAYER BOUNDING BOX
+  player_temp                         = args.state.player.shift_rect(args.inputs.left_right, args.inputs.up_down)
+  args.state.player_box               = [ player_temp.x, player_temp.y, player_temp.w, player_temp.h]
 
   # WALLS
   if (args.state[:boxes].any_intersect_rect?(args.state.player_box) or 
       args.state[:walls].any_intersect_rect?(args.state.player_box) or
-      args.state[:doors].any_intersect_rect?(args.state.player_box))
-    args.state.can_move = false
+      args.state[:doors].any_intersect_rect?(args.state.player_box) or
+      args.state[:collectables].any_intersect_rect?(args.state.player_box))
+    
+    args.state.can_move               = false
   else
-    args.state.can_move = true
+    args.state.can_move               = true
   end
-
-  # COLLECTABLES
-  if (args.state[:collectables].any_intersect_rect?(args.state.player_box))
-    #args.state.collectables.pop
-    #args.state.doors.pop
-    #args.state.score += 1
-    args.state.can_hold = true
-  else
-    args.state.can_hold = false
-  end
-
   
+  # DOORS
+  
+  # COLLECTABLE 
+  if (args.state[:collectables].any_intersect_rect? args.state.player_box) && !args.state.is_kicking
+    args.state.can_kick               = true
+  else
+    args.state.can_kick               = false
+  end
   
   # GOAL
   if (args.state[:goal].any_intersect_rect?(args.state.player_box))
-    args.state.level += 1
+    args.state.level                  += 1
     update_room(args, args.state.level)
   end
-
-  # set X boundaries
-  # if args.state.player.x < SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + TILE_SIZE
-  #   args.state.player.x = SCREEN_CENTER_H - VIRTUAL_SCREEN_WIDTH/2 + TILE_SIZE
-  # elsif args.state.player.x > SCREEN_CENTER_H + VIRTUAL_SCREEN_WIDTH/2 - TILE_SIZE * 2
-  #   args.state.player.x = SCREEN_CENTER_H + VIRTUAL_SCREEN_WIDTH/2 - TILE_SIZE * 2
-  # end
-
-  # set Y boundaries
-  # if args.state.player.y < SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + TILE_SIZE
-  #   args.state.player.y = SCREEN_CENTER_V - VIRTUAL_SCREEN_HEIGHT/2 + TILE_SIZE
-  # elsif args.state.player.y > SCREEN_CENTER_V + VIRTUAL_SCREEN_HEIGHT/2 - TILE_SIZE * 2
-  #   args.state.player.y = SCREEN_CENTER_V + VIRTUAL_SCREEN_HEIGHT/2 - TILE_SIZE * 2
-  # end
 end
 
 # manage all inputs
 def inputs args, *vector
-
   return unless args.state.can_move
+  
+  args.state.is_moving              = (args.inputs.left_right != 0 || args.inputs.up_down != 0) ? true : false
 
-  args.state.player.x += args.inputs.left_right * args.state.speed
-  args.state.player.y += args.inputs.up_down * args.state.speed
+  args.state.player.x               += args.inputs.left_right * args.state.speed
+  args.state.player.y               += args.inputs.up_down * args.state.speed
 
   # TODO - spawn particles when moving
 
@@ -338,22 +335,24 @@ def inputs args, *vector
   if args.inputs.left_right != 0 or args.inputs.up_down != 0
     looping_animation args 
   else
-    args.state.player.path = "/sprites/player/player0.png"
+    args.state.player.path          = "/sprites/player/player0.png"
   end
 
-  if args.inputs.keyboard.key_down.space
-    activate_holding_box args
+  # KICK MECHANICS
+  if (args.inputs.keyboard.key_held.space) && args.state.can_kick
+    kick_block args
+    args.state.player.path          = "/sprites/player/player3.png"
   end
   
-  args.state.camera.scale = args.state.camera.scale.greater(0.1)
+  args.state.camera.scale           = args.state.camera.scale.greater(0.1)
 end
 
 def calc_scene_position args
-  result = { x: args.state.camera.x,
-             y: args.state.camera.y,
-             w: args.state.world.w * args.state.camera.scale,
-             h: args.state.world.h * args.state.camera.scale,
-             scale: args.state.camera.scale }
+  result                            = { x: args.state.camera.x,
+                                        y: args.state.camera.y,
+                                        w: args.state.world.w * args.state.camera.scale,
+                                        h: args.state.world.h * args.state.camera.scale,
+                                        scale: args.state.camera.scale }
 
   return result if args.state.camera.show_empty_space == :yes
 
@@ -377,42 +376,27 @@ def calc_scene_position args
 end
 
 def looping_animation args
-  # Here we define a few local variables that will be sent
-  # into the magic function that gives us the correct sprite image
-  # over time. There are four things we need in order to figure
-  # out which sprite to show.
+  start_looping_at                  = 1
+  number_of_sprites                 = 4
 
-  # 1. When to start the animation.
-  start_looping_at = 1
+  number_of_frames                  = 4
 
-  # 2. The number of pngs that represent the full animation.
-  number_of_sprites = 4
+  does_sprite_loop                  = true
 
-  # 3. How long to show each png.
-  args.state.x_scale ||= 1
-  number_of_frames_to_show_each_sprite = 4
+  sprite_index                      = start_looping_at.frame_index number_of_sprites,
+                                      number_of_frames, 
+                                      does_sprite_loop
 
-  # 4. Whether the animation should loop once, or forever.
-  does_sprite_loop = true
-
-  # With the variables defined above, we can get a number
-  # which represents the sprite to show by calling the `frame_index` function.
-  # In this case the number will be between 0, and 5 (you can see the sprites
-  # in the ./sprites directory).
-  sprite_index = start_looping_at.frame_index number_of_sprites,
-                                              number_of_frames_to_show_each_sprite,
-                                              does_sprite_loop
-
-  args.state.player.path = "sprites/player/player#{sprite_index}.png"
+  args.state.player.path            = "sprites/player/player#{sprite_index}.png"
 end
 
 # update func
 def tick args
   init args
   render args
-  calc_collisions args unless args.state.player == []
-  inputs args unless args.state.player == []
+  calc_collisions args              unless args.state.player == []
+  inputs args                       unless args.state.player == []
 end
 
 # refresh all variables
-#$gtk.reset
+# $gtk.reset
