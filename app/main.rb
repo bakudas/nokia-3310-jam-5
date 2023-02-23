@@ -179,7 +179,7 @@ def init args
   # PLAYER MECHANICS
   args.state.is_moving                ||= false
   args.state.is_kicking               ||= false
-  args.state.has_projectile           ||= false
+  args.state.has_projectile           ||= nil
   args.state.can_move                 ||= true
   args.state.can_kick                 ||= false
   args.state.can_put                  ||= false
@@ -187,7 +187,7 @@ def init args
 
   # set speed
   args.state.speed                    ||= 1
-  args.state.bullet_speed             ||= 1
+  args.state.bullet_speed             ||= 4
   
   # set colors
   args.state.cor_primaria             ||= { r: 199, g: 240, b: 216 }
@@ -202,13 +202,13 @@ def init args
                                             b: 35 }
 
   # create background with color 1
-  args.state.background               ||= { x: (1280-VIRTUAL_SCREEN_WIDTH)/2, 
-                                            y: (720-VIRTUAL_SCREEN_HEIGHT)/2, 
-                                            w: VIRTUAL_SCREEN_WIDTH, 
-                                            h: VIRTUAL_SCREEN_HEIGHT, 
-                                            r: args.state.cor_primaria[:r],
-                                            g: args.state.cor_primaria[:g],
-                                            b: args.state.cor_primaria[:b] }
+  args.state.background               ||= [ (1280-VIRTUAL_SCREEN_WIDTH)/2, 
+                                            (720-VIRTUAL_SCREEN_HEIGHT)/2, 
+                                            VIRTUAL_SCREEN_WIDTH, 
+                                            VIRTUAL_SCREEN_HEIGHT, 
+                                            args.state.cor_primaria[:r],
+                                            args.state.cor_primaria[:g],
+                                            args.state.cor_primaria[:b] ]
 
   # set current ROOM
   args.state.level                    ||= 0
@@ -227,7 +227,7 @@ def render args
 
   # RENDER BG STUFF
   args.outputs[:scene].primitives     << args.state.back.sprite!
-  args.outputs[:scene].primitives     << args.state.background.sprite!
+  args.outputs[:scene].primitives     << args.state.background.solid
   
   # RENDER ROOMS
   update_room(args, args.state.level) unless args.state.tick_count != 0
@@ -243,7 +243,7 @@ def render args
   # RENDER PROJECTILES
   args.state.projectiles ||= []
   args.outputs[:scene].primitives   << args.state.projectiles.sprite if args.state.has_projectile
-  bullet_movement args if args.state.has_projectile
+  bullet_movement args, args.state.projectile if args.state.has_projectile
 
   # RENDER TEXTS
   if args.state.can_kick
@@ -269,7 +269,7 @@ def render args
                                            args.state.cor_primaria[:b], 
                                            255, 
                                            'fonts/tiny.ttf' ]
-  
+
   # RENDER CAMERA
   render_camera args 
 end
@@ -307,25 +307,33 @@ def calc_collisions args
     args.state.can_move               = true
   end
   
-  # COLLECTABLE 
+  # BLOCKS
   if (args.state[:collectables].any_intersect_rect? args.state.player_box) && !args.state.is_kicking
     args.state.can_kick               = true
   else
     args.state.can_kick               = false
   end
   
-  args.state.projectiles.each { |projectile|
-    args.state.doors.each { |door|
-      if door.any_intersect_rect? projectile
-        puts "#{projectile}, #{door}"
-      end
-    }
-  } unless args.state.projectiles == []
+  # BLOCK HITS DOORS
+  if args.state.has_projectile && args.state[:doors].any_intersect_rect?(args.state.projectile)
+    to_remove = []
+    to_remove << args.state.doors.find { |d| d.intersect_rect?(args.state.projectile) }
+    to_remove << args.state.projectile
+
+    args.state.doors.reject! { |r| to_remove.include?r }
+    args.state.collectables.reject! { |r| to_remove.include?r }
+    args.state.has_projectile = false
+
+  end
+
   # GOAL
   if (args.state[:goal].any_intersect_rect?(args.state.player_box))
     args.state.level                  += 1
     update_room(args, args.state.level)
   end
+  
+  # REMOVE BLOCK OUT OF CANVAS
+  # puts args.state. { |p| p.intersect_rect?args.state.background } unless !args.state.has_projectile
 end
 
 # PROCESS THE INPUTS
@@ -340,18 +348,20 @@ def process_inputs args
   
   # TODO - spawn particles when moving
 
+  args.state.bullet_speed = args.inputs.left_right unless args.state.has_projectile
+
   #flip sprite
   if args.inputs.left
     args.state.player.flip_horizontally = true
-    args.state.bullet_speed = -1 unless args.state.has_projectile
+    # args.state.bullet_speed = -1 unless args.state.has_projectile
   elsif args.inputs.right
     args.state.player.flip_horizontally = false
-    args.state.bullet_speed = 1 unless args.state.has_projectile
+    # args.state.bullet_speed = 1 unless args.state.has_projectile
   end
 
   # animation
   if args.state.can_move && args.state.is_moving
-    looping_animation args 
+    player_animation args 
   else
     args.state.player.path          = "/sprites/player/player0.png"
   end
@@ -360,21 +370,27 @@ def process_inputs args
   if args.inputs.keyboard.key_down.space && args.state.can_kick
     args.state.is_kicking           = true
     args.state.is_moving            = false
+
     # TODO args.state.player.path          = "/sprites/player/player2.png"
+    
     args.state.has_projectile       = true
-    args.state.projectiles          << args.state.collectables.find { |c| c.intersect_rect?(args.state.player_box) }
-    puts args.state.projectiles
-    args.state.collectables.reject! { |c| c.intersect_rect?(args.state.player_box) }
+    
+    args.state.projectile = args.state.collectables.find { |c| c.intersect_rect?(args.state.player_box) }
+
+    bullet_movement(args, args.state.projectile)
   else
     args.state.is_kicking           = false
   end
 end
 
 # KICK MECHANICS
-def bullet_movement args
-  args.state.projectiles.x += args.state.bullet_speed  
+def bullet_movement(args, block)
+  block.x += args.state.bullet_speed if args.state.has_projectile
 end
 
+def destroy_block block
+  to_remove = [block].reject!
+end
 # CALCULATE VIRTUAL CAMERA POSITION
 def calc_scene_position args
   result                            = { x: args.state.camera.x,
@@ -404,7 +420,7 @@ def calc_scene_position args
   result
 end
 
-def looping_animation args
+def player_animation args
   start_looping_at                  = 1
   number_of_sprites                 = 4
 
