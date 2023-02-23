@@ -15,10 +15,11 @@ VIRTUAL_SCREEN_HEIGHT = 48
 # level entities 
 ENTITIES = {
   "#": "/sprites/rooms/wall.png",
-  "c": "/sprites/rooms/collectable.png",
+  "c": "/sprites/misc/bomb_5x7.png",
   "b": "/sprites/rooms/box.png",
   "k": "/sprites/rooms/.png",
   "d": "/sprites/rooms/door.png",
+  "l": "/sprites/rooms/locker.png",
   "x": "/sprites/enemies/enemies.png",
   "s": "/sprites/rooms/start.png",
   "e": "/sprites/rooms/exit.png",
@@ -47,11 +48,11 @@ ROOM002 = [
   "#####################",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#bbbbbbbbbbbbbbbbbbb#",
-  "#bbb                #",
-  "e  d         c      s",
-  "e  d       c      p s",
-  "e  d     c          s",
-  "#bbb                #",
+  "#bbbd        c      #",
+  "e  l                s",
+  "e  l              p s",
+  "e  l                s",
+  "#bbbd        c       #",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#bbbbbbbbbbbbbbbbbbb#",
   "#####################"
@@ -60,15 +61,15 @@ ROOM002 = [
 ROOM003 = [
   "#####################",
   "#####################",
-  "e      b        x   #",
-  "e      b        c   #",
-  "e      b    bbbbbbbb#",
-  "#      b            s",
-  "#      b          p s",
-  "#      b            s",
-  "#      bdddbbbbbbbbb#",
-  "#          bbbbbbbbb#",
-  "#          bbbbbbbbb#",
+  "########     ########",
+  "########  p  ########",
+  "########     ########",
+  "########     ########",
+  "e  l         ########",
+  "e  l  d c    ########",
+  "e  l         ########",
+  "########     ########",
+  "########     ########",
   "#####################"
 ].reverse
 
@@ -97,11 +98,12 @@ def populate_room(args, room)
   args.state.player = []
   args.state.walls = [] 
   args.state.enemies = []
-  args.state.doors = []
+  args.state.puzzle_hole = []
   args.state.boxes = []
   args.state.start = []
   args.state.goal = []
   args.state.collectables = []
+  args.state.lockers = []
   args.state.empty = []
 
   # EMPTY TEMP_TILE AS WELL
@@ -134,15 +136,18 @@ def populate_room(args, room)
 
       # DOOR 
       when "d"
-        args.state.doors << temp_tile
+        args.state.puzzle_hole << temp_tile
 
       # GOAL POINT
       when "e"
         args.state.goal << temp_tile
 
       when "c"
-        args.state.collectables << temp_tile      
+        args.state.collectables << temp_tile
 
+      when "l"
+        args.state.lockers << temp_tile
+      
       when " "
         args.state.empty << temp_tile
       end
@@ -157,7 +162,8 @@ def render_room args
   args.outputs[:scene].primitives << args.state.boxes.map { |box| box } if args.state.boxes != [] 
   args.outputs[:scene].primitives << args.state.collectables if args.state.collectables != [] 
   args.outputs[:scene].primitives << args.state.start if args.state.start != [] 
-  args.outputs[:scene].primitives << args.state.doors if args.state.doors != [] 
+  args.outputs[:scene].primitives << args.state.puzzle_hole if args.state.doors != [] 
+  args.outputs[:scene].primitives << args.state.lockers if args.state.lockers != [] 
   args.outputs[:scene].primitives << args.state.goal if args.state.goal != [] 
   args.outputs[:scene].primitives << args.state.player if args.state.player != []
 
@@ -213,6 +219,13 @@ def init args
   # set current ROOM
   args.state.level                    ||= 0
   args.state.current_room             ||= ROOMS[args.state.level]
+
+  # PUZZLE SET UP
+  args.state.puzzle_count             ||= args.state.puzzle_hole.length
+  args.state.level_complete           ||= false
+
+  args.state.level_complete           = args.state.puzzle_count <= 0 ? true : false
+  open_door args if args.state.level_complete
 end
 
 # all renders goes here
@@ -243,7 +256,7 @@ def render args
   # RENDER PROJECTILES
   args.state.projectiles ||= []
   args.outputs[:scene].primitives   << args.state.projectiles.sprite if args.state.has_projectile
-  bullet_movement args, args.state.projectile if args.state.has_projectile
+  bullet_movement args, args.state.projectiles if args.state.has_projectile
 
   # RENDER TEXTS
   if args.state.can_kick
@@ -278,6 +291,7 @@ end
 def update_room(args, level)
   args.state.current_room             = ROOMS[level]
   populate_room(args, args.state.current_room)
+  args.state.puzzle_count             = args.state.puzzle_hole.length
 end
 
 # RENDER THE VIRTUAL CAMERA
@@ -290,6 +304,7 @@ def render_camera args
                                            path: :scene }
 end
 
+# CALCULATE ALL COLLISIONS
 def calc_collisions args
   # PLAYER BOUNDING BOX
   player_temp                         = args.state.player.shift_rect(args.inputs.left_right, args.inputs.up_down)
@@ -298,7 +313,8 @@ def calc_collisions args
   # WALLS
   if (args.state[:boxes].any_intersect_rect?(args.state.player_box) or 
       args.state[:walls].any_intersect_rect?(args.state.player_box) or
-      args.state[:doors].any_intersect_rect?(args.state.player_box) or
+      #args.state[:doors].any_intersect_rect?(args.state.player_box) or
+      args.state[:lockers].any_intersect_rect?(args.state.player_box) or
       args.state[:collectables].any_intersect_rect?(args.state.player_box))
     
     args.state.can_move               = false
@@ -315,15 +331,26 @@ def calc_collisions args
   end
   
   # BLOCK HITS DOORS
-  if args.state.has_projectile && args.state[:doors].any_intersect_rect?(args.state.projectile)
+  if args.state.has_projectile && args.state[:puzzle_hole].any_intersect_rect?(args.state.projectiles)
+    # create an array to alloc all game objets to remove
     to_remove = []
-    to_remove << args.state.doors.find { |d| d.intersect_rect?(args.state.projectile) }
-    to_remove << args.state.projectile
+    to_animate = []
 
-    args.state.doors.reject! { |r| to_remove.include?r }
-    args.state.collectables.reject! { |r| to_remove.include?r }
+    # populate with collisions check
+    to_animate << args.state.puzzle_hole.find { |d| d.intersect_rect?(args.state.projectiles) }
+    to_remove << args.state.puzzle_hole.find { |d| d.intersect_rect?(args.state.projectiles) }
+    to_remove << args.state.projectiles
+    puts to_remove.inspect
+    # remove game objects from the original arrays  
+    # args.state.puzzle_hole.reject! { |r| to_remove.include? r }
+    args.state.collectables.reject! { |r| to_remove.include? r }
+
+    # change the puzzle_hole sprite
+    args.state.puzzle_hole.find { |e| to_animate.include? e }.path = "/sprites/rooms/door2.png"
+    args.state.puzzle_count -= 1
+
+    # turn of the bool from bullet movement
     args.state.has_projectile = false
-
   end
 
   # GOAL
@@ -375,9 +402,9 @@ def process_inputs args
     
     args.state.has_projectile       = true
     
-    args.state.projectile = args.state.collectables.find { |c| c.intersect_rect?(args.state.player_box) }
+    args.state.projectiles = args.state.collectables.find { |c| c.intersect_rect?(args.state.player_box) }
 
-    bullet_movement(args, args.state.projectile)
+    bullet_movement(args, args.state.projectiles)
   else
     args.state.is_kicking           = false
   end
@@ -388,8 +415,8 @@ def bullet_movement(args, block)
   block.x += args.state.bullet_speed if args.state.has_projectile
 end
 
-def destroy_block block
-  to_remove = [block].reject!
+def open_door args 
+  args.state.lockers = []
 end
 # CALCULATE VIRTUAL CAMERA POSITION
 def calc_scene_position args
