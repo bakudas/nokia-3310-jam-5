@@ -31,13 +31,13 @@ ENTITIES = {
 # level design
 ROOM001 = [
   '#####################',
-  '#########sss#########',
+  '#####################',
+  '#bbbbbbbb     bbbbbb#',
   '#bbbbbbbb     bbbbbb#',
   '#bbbbbbbb  p  bbbbbb#',
+  'e             bbbbbb#',
+  'e             bbbbbb#',
   '#bbbbbbbb     bbbbbb#',
-  'e             bbbbbb#',
-  'e             bbbbbb#',
-  'ebbbbbbbb     bbbbbb#',
   '#bbbbbbbb     bbbbbb#',
   '#bbbbbbbb  k  bbbbbb#',
   '#bbbbbbbb     bbbbbb#',
@@ -47,15 +47,15 @@ ROOM001 = [
 ROOM002 = [
   '#####################',
   '#####################',
-  '#bbbbbbbbbbbbbbbbbbb#',
-  '#bbbbbbbbbbbbbbbbbbb#',
+  '#bbbb               #',
+  '#bbbb               #',
   '#bbbd        c      #',
   'e  l                s',
   'e  l      k       p s',
   'e  l                s',
   '#bbbd        c      #',
-  '#bbbbbbbbbbbbbbbbbbb#',
-  '#bbbbbbbbbbbbbbbbbbb#',
+  '#bbbb               #',
+  '#bbbb               #',
   '#####################'
 ].reverse
 
@@ -63,8 +63,8 @@ ROOM003 = [
   '#####################',
   '#####################',
   '########     ########',
-  '########  p  ########',
   '########     ########',
+  '########  p  ########',
   '########     ########',
   'e  l         ########',
   'e  l  d c    ########',
@@ -78,7 +78,7 @@ ROOM004 = [
   '#####################',
   '#####################',
   '# c x               s',
-  '#                 p s',
+  '#                p  s',
   '#bbbb               s',
   'e   b       bbbbbbbb#',
   'e   b       d    c  #',
@@ -205,8 +205,8 @@ def init(args)
   case args.state.player_state
   when :big
     args.state.player_speed             = args.state.speed_slow
-    args.state.player.w                 = 8
-    args.state.player.h                 = 8
+    args.state.player.w                 = 7
+    args.state.player.h                 = 10
   when :small
     args.state.player.w                 = 4
     args.state.player.h                 = 4
@@ -344,7 +344,7 @@ def calc_collisions(args)
   end
 
   # BLOCKS
-  args.state.can_kick = if (args.state[:collectables].any_intersect_rect? args.state.player_box) && !args.state.is_kicking
+  args.state.can_kick = if (args.state[:collectables].any_intersect_rect? args.state.player_box) && !args.state.is_kicking && args.state.player_state == :big
                           true
                         else
                           false
@@ -442,7 +442,8 @@ def process_inputs(args)
   if args.state.can_move && args.state.is_moving
     player_animation args
   else
-    args.state.player.path          = '/sprites/player/player0.png'
+    args.state.player.path            = '/sprites/player/novo/player0.png' if args.state.player_state == :big
+    args.state.player.path            = "sprites/player/small/player_small0.png" if args.state.player_state == :small
   end
 
   # KICK MECHANICS
@@ -501,8 +502,9 @@ def calc_scene_position(args)
 end
 
 def player_animation(args)
-  start_looping_at                  = 1
-  number_of_sprites                 = 4
+  start_looping_at                  = 7
+
+  number_of_sprites                 = 8
 
   number_of_frames                  = 4
 
@@ -512,7 +514,8 @@ def player_animation(args)
                                                                    number_of_frames,
                                                                    does_sprite_loop
 
-  args.state.player.path            = "sprites/player/player#{sprite_index}.png"
+  args.state.player.path            = "sprites/player/novo/player#{sprite_index}.png" if args.state.player_state == :big
+  args.state.player.path            = "sprites/player/small/player_small#{sprite_index}.png" if args.state.player_state == :small
 end
 
 def sprite_animations(start_frame = 1, num_sprites = 4, num_frames = 4, is_loopable = true)
