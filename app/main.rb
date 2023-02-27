@@ -32,6 +32,66 @@ ENTITIES = {
 ROOM001 = [
   '#####################',
   '#####################',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#                   e',
+  '#  p                e',
+  '#                   e',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#####################'
+].reverse
+
+ROOM002 = [
+  '#####################',
+  '#####################',
+  '#bbbbbbbbbbbbbbbbbbb#',
+  '#bbbbbbbbbbbbbbbbbbb#',
+  '#                   #',
+  '#                   #',
+  '#  p                #',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#########eee#########'
+].reverse
+
+ROOM003 = [
+  '#####################',
+  '#####################',
+  '########            #',
+  '########            #',
+  '########       p    #',
+  '########            #',
+  'e  l                #',
+  'e  l                #',
+  'e  l                #',
+  '########            #',
+  '########d      c    #',
+  '#####################'
+].reverse
+
+ROOM004 = [
+  '#####################',
+  '#####################',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#               p   #',
+  '#                   #',
+  '#   c   d   d   c   #',
+  '#bbbbbbbblllbbbbbbbb#',
+  '#bbbbbbbb   bbbbbbbb#',
+  '#bbbbbbbb   bbbbbbbb#',
+  '#########eee#########'
+].reverse
+
+ROOM005 = [
+  '#####################',
+  '#####################',
   '#bbbbbbbb     bbbbbb#',
   '#bbbbbbbb     bbbbbb#',
   '#bbbbbbbb  p  bbbbbb#',
@@ -44,52 +104,97 @@ ROOM001 = [
   '#####################'
 ].reverse
 
-ROOM002 = [
+ROOM006 = [
   '#####################',
   '#####################',
-  '#bbbb               #',
-  '#bbbb               #',
+  '#bbbbbbbbbbbb       #',
   '#bbbd        c      #',
-  'e  l                s',
-  'e  l      k       p s',
-  'e  l                s',
+  '#bbbbbbbbbbbb       #',
+  'e  l                #',
+  'e  l         k    p #',
+  'e  l                #',
+  '#bbbbbbbbbbbb       #',
   '#bbbd        c      #',
-  '#bbbb               #',
-  '#bbbb               #',
+  '#bbbbbbbbbbbb       #',
   '#####################'
 ].reverse
 
-ROOM003 = [
+ROOM007 = [
   '#####################',
   '#####################',
-  '########     ########',
-  '########     ########',
-  '########  p  ########',
-  '########     ########',
-  'e  l         ########',
-  'e  l  d c    ########',
-  'e  l         ########',
-  '########     ########',
-  '########     ########',
+  '#           bbbbbbbb#',
+  '#            bbbbbbb#',
+  '#              bbbbb#',
+  '#    c             d#',
+  '#bbbbb  b           #',
+  'e    l  bbk      p  #',
+  'e    l  bbbb        #',
+  '#bbbbbbbbbbbb       #',
+  '#bbbbbbbbbbbd   c   #',
   '#####################'
 ].reverse
 
-ROOM004 = [
+ROOM008 = [
   '#####################',
   '#####################',
-  '# c x               s',
-  '#                p  s',
-  '#bbbb               s',
-  'e   b       bbbbbbbb#',
-  'e   b       d    c  #',
-  'e   d       d       #',
-  '#   d       bbbbbbbb#',
-  '#bbbbbb     bbbbbbbb#',
-  '#bbbbbb  c  bbbbbbbb#',
+  '##      bbbbb       #',
+  '##      bbbbb       #',
+  '##      bbbbb       #',
+  'se      bbbbb       s',
+  'se      bbbbb    p  s',
+  'se      bbbbb       s',
+  '##      bbbbb       #',
+  '##      bbbbb       #',
+  '##      bbbbb       #',
   '#####################'
 ].reverse
 
-ROOMS = [ROOM001, ROOM002, ROOM003, ROOM004]
+ROOM009 = [
+  '#####################',
+  '#####################',
+  '#      bbbbbbbbbbbbb#',
+  '#      c           d#',
+  '#      bbbbbbbbbbbbb#',
+  's      bbbbbbbbbbbbb#',
+  's  p   bbbbbbb      #',
+  's      bbbbbbb      s',
+  '#bbbbbbbbbbbbb  k   s',
+  '#bbbbbbbbbbbbb      s',
+  '#########eee#########',
+  '#########lll#########'
+].reverse
+
+ROOM010 = [
+  '#####################',
+  '#####################',
+  '#     #########     #',
+  '#     ###eee###     #',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#         p         #',
+  '#####################'
+].reverse
+
+ROOM011 = [
+  '#####################',
+  '#####################',
+  '#                   #',
+  '#                   #',
+  '#         p         #',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#                   #',
+  '#####################'
+].reverse
+
+ROOMS = [ROOM001, ROOM002, ROOM003, ROOM004, ROOM005, ROOM006, ROOM007, ROOM008, ROOM009, ROOM010, ROOM011]
 
 def populate_room(args, room)
   # BLOCK ANY ROOM INTERACTION TO UPDATE AND RENDER
@@ -196,7 +301,7 @@ def init(args)
   args.state.can_put                  ||= false
   args.state.carry_max                ||= 1
   args.state.speed_fast               ||= 1
-  args.state.speed_slow               ||= 0.3
+  args.state.speed_slow               ||= 0.25
   args.state.player_state             ||= PLAYER_STATES[0]
   args.state.player_speed             ||= 1
   args.state.can_change_state         ||= false
@@ -216,7 +321,7 @@ def init(args)
   end
 
   # BLOCK BULLET SET UP
-  args.state.bullet_speed             ||= 4
+  args.state.bullet_speed             ||= 1
 
   # set colors
   args.state.cor_primaria             ||= { r: 199, g: 240, b: 216 }
@@ -301,6 +406,16 @@ def render(args)
                                   255,
                                   'fonts/tiny.ttf']
 
+  args.outputs[:scene].labels << [(1280 - VIRTUAL_SCREEN_WIDTH) / 2 + 10,
+                                  (720 + VIRTUAL_SCREEN_HEIGHT) / 2 - 10,
+                                  "Thanks for Playing!",
+                                  -8,
+                                  0,
+                                  args.state.cor_secundaria[:r],
+                                  args.state.cor_secundaria[:g],
+                                  args.state.cor_secundaria[:b],
+                                  255,
+                                  'fonts/tiny.ttf'] if args.state.level == 10
   # RENDER CAMERA
   render_camera args
 end
@@ -373,7 +488,7 @@ def calc_collisions(args)
     args.state.has_projectile = false
   end
 
-  
+
   # PICK UPS
   if args.state[:pick_ups][0] != nil && args.state[:pick_ups].intersect_rect?(args.state.player_box)
     return unless args.state.pickable  #check if player can pick up
@@ -382,7 +497,7 @@ def calc_collisions(args)
 
     # 'animate' the pick up
     args.state.pick_ups.path = "sprites/rooms/vazio.png"
-    
+
     # grant player can change state
     args.state.can_change_state = true
 
@@ -401,16 +516,16 @@ def calc_collisions(args)
 end
 
 # CHANGE player state
-def change_player_state args, state 
-  return unless args.state.can_change_state # check if player can change state 
+def change_player_state args, state
+  return unless args.state.can_change_state # check if player can change state
 
   # change player state
-  if args.state.player_state == :big 
+  if args.state.player_state == :big
     args.state.player_state = state[1]
   elsif args.state.player_state == :small
     args.state.player_state = state[0]
   end
-  
+
   # lock player change state
   args.state.can_change_state = false
 end
@@ -425,17 +540,20 @@ def process_inputs(args)
     args.state.player.y               += args.inputs.up_down * args.state.player_speed
   end
 
+  # RESTART ROOM
+  update_room args, args.state.level if args.inputs.keyboard.e
+
   # TODO: - spawn particles when moving
 
-  args.state.bullet_speed = args.inputs.left_right unless args.state.has_projectile
+  # args.state.bullet_speed = args.inputs.left_right unless args.state.has_projectile
 
   # flip sprite
   if args.inputs.left
     args.state.player.flip_horizontally = true
-    # args.state.bullet_speed = -1 unless args.state.has_projectile
+    args.state.bullet_speed = -1 if args.state.is_kicking
   elsif args.inputs.right
     args.state.player.flip_horizontally = false
-    # args.state.bullet_speed = 1 unless args.state.has_projectile
+    args.state.bullet_speed = 1 if args.state.is_kicking
   end
 
   # animation
@@ -450,6 +568,8 @@ def process_inputs(args)
   if args.inputs.keyboard.key_down.space && args.state.can_kick
     args.state.is_kicking           = true
     args.state.is_moving            = false
+
+    args.state.block_move_dir = args.inputs.left_right
 
     # TODO: args.state.player.path          = "/sprites/player/player2.png"
 

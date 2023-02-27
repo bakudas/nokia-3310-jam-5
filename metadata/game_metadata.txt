@@ -1,9 +1,9 @@
 # Remove the pound sign and leading space for the properties below before publishing your game.
 devid=bakudas
-devtitle=Solitude
-gameid=com.vacaroxa.solitude
-gametitle=Solitude
-version=0.1
+devtitle=VacaRoxa
+gameid=solitu
+gametitle=solitu
+version=0.2
 icon=metadata/icon.png
 
 # === Flags available at all licensing tiers ===
